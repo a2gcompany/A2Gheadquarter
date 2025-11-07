@@ -6,19 +6,36 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
-    const companyId = formData.get("companyId") as string
+    const companySlug = formData.get("companyId") as string
 
-    if (!file || !companyId) {
+    if (!file || !companySlug) {
       return NextResponse.json(
         { error: "File and companyId are required" },
         { status: 400 }
       )
     }
 
+    // Get company UUID from slug
+    const { data: company, error: companyError } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("slug", companySlug)
+      .single()
+
+    if (companyError || !company) {
+      console.error("Company not found:", companyError)
+      return NextResponse.json(
+        { error: "Company not found" },
+        { status: 404 }
+      )
+    }
+
+    const companyId = company.id
+
     // Upload file to Supabase Storage
     const fileExt = file.name.split(".").pop()
     const fileName = `${Date.now()}_${file.name}`
-    const filePath = `${companyId}/${fileName}`
+    const filePath = `${companySlug}/${fileName}`
 
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from("documents")
@@ -59,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process document asynchronously
-    processDocumentAsync(document.id, filePath, file)
+    processDocumentAsync(document.id, filePath, file, companyId)
 
     return NextResponse.json({
       success: true,
@@ -77,7 +94,8 @@ export async function POST(request: NextRequest) {
 async function processDocumentAsync(
   documentId: string,
   filePath: string,
-  file: File
+  file: File,
+  companyId: string
 ) {
   try {
     // Update status to processing
@@ -109,7 +127,7 @@ async function processDocumentAsync(
     // Insert extracted KPIs
     if (analysis.kpis && analysis.kpis.length > 0) {
       const kpisToInsert = analysis.kpis.map((kpi) => ({
-        company_id: file.name.split("/")[0], // Extract from path
+        company_id: companyId,
         document_id: documentId,
         kpi_type: kpi.type,
         kpi_name: kpi.name,
