@@ -24,6 +24,20 @@ interface UploadingFile {
 export function DocumentUpload({ companyId, onUploadComplete }: DocumentUploadProps) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([])
 
+  // Validar que hay una empresa seleccionada
+  if (companyId === "all") {
+    return (
+      <div className="text-center py-8">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
+        <p className="text-lg font-semibold mb-2">Selecciona una empresa específica</p>
+        <p className="text-sm text-muted-foreground">
+          Para subir documentos, primero selecciona una empresa en el selector de arriba
+          (A2G, Roger Sanchez, Audesign, etc.)
+        </p>
+      </div>
+    )
+  }
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       for (const file of acceptedFiles) {
