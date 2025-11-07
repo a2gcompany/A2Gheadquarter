@@ -1,24 +1,23 @@
 "use client"
 
-import { Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
+import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency, formatNumber } from "@/lib/utils"
+
+interface LineConfig {
+  dataKey: string
+  stroke: string
+  name: string
+  strokeWidth?: number
+}
 
 interface LineChartProps {
-  title?: string
+  title: string
   description?: string
   data: any[]
   xDataKey: string
-  lines: {
-    dataKey: string
-    stroke: string
-    name: string
-    strokeWidth?: number
-  }[]
+  lines: LineConfig[]
   valueFormatter?: (value: number) => string
   height?: number
-  showLegend?: boolean
-  showGrid?: boolean
 }
 
 export function LineChart({
@@ -27,25 +26,35 @@ export function LineChart({
   data,
   xDataKey,
   lines,
-  valueFormatter,
+  valueFormatter = (value) => value.toString(),
   height = 300,
-  showLegend = true,
-  showGrid = true,
 }: LineChartProps) {
-  const defaultFormatter = (value: number) => formatNumber(value)
-
-  return (
-    <Card className="glass">
-      {title && (
+  if (data.length === 0) {
+    return (
+      <Card className="glass">
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
-      )}
+        <CardContent>
+          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+            <p>No hay datos disponibles</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="glass">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
+      </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={height}>
           <RechartsLineChart data={data}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" />}
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
             <XAxis
               dataKey={xDataKey}
               stroke="hsl(var(--muted-foreground))"
@@ -58,36 +67,17 @@ export function LineChart({
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tickFormatter={valueFormatter || defaultFormatter}
+              tickFormatter={valueFormatter}
             />
             <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null
-                return (
-                  <div className="rounded-lg border bg-background p-2 shadow-sm">
-                    <div className="grid gap-2">
-                      <div className="flex flex-col">
-                        <span className="text-[0.70rem] uppercase text-muted-foreground">
-                          {payload[0].payload[xDataKey]}
-                        </span>
-                      </div>
-                      {payload.map((item: any, index: number) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: item.stroke }}
-                          />
-                          <span className="text-sm font-semibold">
-                            {item.name}: {valueFormatter ? valueFormatter(item.value) : defaultFormatter(item.value)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
+              formatter={valueFormatter}
+              contentStyle={{
+                backgroundColor: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "8px",
               }}
             />
-            {showLegend && <Legend />}
+            <Legend />
             {lines.map((line) => (
               <Line
                 key={line.dataKey}
