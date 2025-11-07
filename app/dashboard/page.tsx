@@ -5,6 +5,8 @@ import { CompanySelector } from "@/components/dashboard/company-selector"
 import { KPICard } from "@/components/dashboard/kpi-card"
 import { LineChart } from "@/components/charts/line-chart"
 import { BarChart } from "@/components/charts/bar-chart"
+import { DocumentUpload } from "@/components/documents/document-upload"
+import { AIChat } from "@/components/chat/ai-chat"
 import {
   DollarSign,
   TrendingUp,
@@ -15,6 +17,14 @@ import {
   MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { formatCurrency } from "@/lib/utils"
 
 // Mock data
@@ -73,14 +83,40 @@ export default function DashboardPage() {
                 value={selectedCompany}
                 onValueChange={setSelectedCompany}
               />
-              <Button variant="outline" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Subir Documento
-              </Button>
-              <Button className="gap-2 bg-gradient-premium">
-                <MessageSquare className="h-4 w-4" />
-                Chat IA
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Upload className="h-4 w-4" />
+                    Subir Documento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Subir Documento</DialogTitle>
+                    <DialogDescription>
+                      Sube PDFs, Excel, CSV o imágenes. La IA los analizará automáticamente.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DocumentUpload companyId={selectedCompany} />
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="gap-2 bg-gradient-premium">
+                    <MessageSquare className="h-4 w-4" />
+                    Chat IA
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Chat con IA</DialogTitle>
+                    <DialogDescription>
+                      Pregunta sobre tus datos financieros, métricas y KPIs.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <AIChat companyId={selectedCompany} userId="demo-user" />
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
