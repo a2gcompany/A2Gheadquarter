@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Upload,
   MessageSquare,
+  Rocket,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -83,6 +84,14 @@ export default function DashboardPage() {
                 value={selectedCompany}
                 onValueChange={setSelectedCompany}
               />
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => window.location.href = '/launches'}
+              >
+                <Rocket className="h-4 w-4" />
+                Lanzamientos
+              </Button>
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-2">
