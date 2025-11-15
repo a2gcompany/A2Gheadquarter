@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: '/headquarters',
+  // basePath removed for subdomain usage
   reactStrictMode: true,
   swcMinify: true,
   images: {
