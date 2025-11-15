@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase/admin"
+import { supabaseAdmin, validateAdminClient } from "@/lib/supabase/admin"
 import { analyzeDocument } from "@/lib/services/claude-service"
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables at runtime
+    validateAdminClient()
+    
     const formData = await request.formData()
     const file = formData.get("file") as File
     const companySlug = formData.get("companyId") as string

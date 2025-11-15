@@ -1,16 +1,20 @@
 // Server-only Supabase admin client. Do NOT import this in client components.
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error("Missing Supabase service role environment variables")
-}
-
+// Create client even if vars are missing (for build time), will fail at runtime if used without vars
 export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
   },
 })
+
+// Helper to validate credentials at runtime
+export function validateAdminClient() {
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Missing Supabase service role environment variables")
+  }
+}
