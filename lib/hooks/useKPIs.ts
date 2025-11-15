@@ -43,6 +43,12 @@ export function useKPIs(companyId: string) {
   const fetchKPIs = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      )
 
       // Query base para KPIs
       let query = supabase
@@ -52,25 +58,52 @@ export function useKPIs(companyId: string) {
 
       if (companyId !== "all") {
         // Obtener el UUID de la empresa
-        const { data: company } = await supabase
+        const companyPromise = supabase
           .from("companies")
           .select("id")
           .eq("slug", companyId)
           .single()
+
+        const { data: company, error: companyError } = await Promise.race([
+          companyPromise,
+          timeoutPromise
+        ]) as any
+
+        if (companyError) {
+          if (companyError.code === 'PGRST116' || companyError.message?.includes('does not exist')) {
+            console.warn('Database tables not yet created.')
+            setError('⚠️ Database not initialized. Run migration: see MIGRATION_INSTRUCTIONS.md')
+            setLoading(false)
+            return
+          }
+          throw companyError
+        }
 
         if (company) {
           query = query.eq("company_id", company.id)
         }
       }
 
-      const { data, error } = await query
+      const queryPromise = query
+      const { data, error: queryError } = await Promise.race([
+        queryPromise,
+        timeoutPromise
+      ]) as any
 
-      if (error) throw error
+      if (queryError) {
+        if (queryError.code === 'PGRST116' || queryError.message?.includes('does not exist')) {
+          console.warn('Database tables not yet created.')
+          setError('⚠️ Database not initialized. Run migration: see MIGRATION_INSTRUCTIONS.md')
+          setLoading(false)
+          return
+        }
+        throw queryError
+      }
 
       const kpisData = (data || []) as any[]
       setKpis(kpisData)
 
-      // Calcular resumen
+      // Calculate summary
       const newSummary: KPISummary = {
         liquidez: 0,
         revenue: 0,
@@ -81,35 +114,27 @@ export function useKPIs(companyId: string) {
         liquidityData: [],
       }
 
-      // Liquidez (último valor de cashflow o balance)
       const liquidezKPI = kpisData.find(
         (k) => k.kpi_type === "cashflow" || k.kpi_type === "balance"
       )
-      if (liquidezKPI) {
-        newSummary.liquidez = liquidezKPI.value
-      }
+      if (liquidezKPI) newSummary.liquidez = liquidezKPI.value
 
-      // Revenue total
       const revenueKPIs = kpisData.filter((k) => k.kpi_type === "revenue")
       newSummary.revenue = revenueKPIs.reduce((sum, k) => sum + k.value, 0)
 
-      // Profit
       const profitKPIs = kpisData.filter((k) => k.kpi_type === "profit")
       newSummary.profit = profitKPIs.reduce((sum, k) => sum + k.value, 0)
 
-      // Runway (burn_rate)
       const runwayKPI = kpisData.find((k) => k.kpi_type === "runway")
       if (runwayKPI) {
         newSummary.runway = runwayKPI.value
       } else {
-        // Calcular runway aproximado: liquidez / burn rate mensual
         const burnRateKPI = kpisData.find((k) => k.kpi_type === "burn_rate")
         if (burnRateKPI && burnRateKPI.value > 0) {
           newSummary.runway = newSummary.liquidez / burnRateKPI.value
         }
       }
 
-      // Revenue por empresa
       const revenueByCompanyMap = new Map<string, number>()
       revenueKPIs.forEach((k: any) => {
         const companyName = k.companies?.name || "Unknown"
@@ -120,7 +145,6 @@ export function useKPIs(companyId: string) {
         ([company, revenue]) => ({ company, revenue })
       )
 
-      // Gastos por categoría (expense)
       const expenseKPIs = kpisData.filter((k) => k.kpi_type === "expense")
       const expensesByCategoryMap = new Map<string, number>()
       expenseKPIs.forEach((k: any) => {
@@ -132,7 +156,6 @@ export function useKPIs(companyId: string) {
         ([category, amount]) => ({ category, amount })
       )
 
-      // Evolución de liquidez (últimos 6 meses)
       const cashflowKPIs = kpisData
         .filter((k) => k.kpi_type === "cashflow" || k.kpi_type === "balance")
         .sort((a, b) => {
@@ -148,13 +171,22 @@ export function useKPIs(companyId: string) {
         return {
           month: month.charAt(0).toUpperCase() + month.slice(1),
           liquidez: k.value,
-          objetivo: k.value * 1.1, // Objetivo 10% más alto
+          objetivo: k.value * 1.1,
         }
       })
 
       setSummary(newSummary)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error loading KPIs")
+      console.error('Error fetching KPIs:', err)
+      const errorMessage = err instanceof Error ? err.message : "Error loading KPIs"
+      
+      if (errorMessage.includes('timeout')) {
+        setError('⏱️ Connection timeout. Check your internet connection.')
+      } else if (errorMessage.includes('not initialized') || errorMessage.includes('does not exist')) {
+        setError('⚠️ Database not initialized. See MIGRATION_INSTRUCTIONS.md')
+      } else {
+        setError(`❌ ${errorMessage}`)
+      }
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,8 @@
 "use client"
 
+import { Header } from "@/components/header"
+"use client"
+
 import { useState } from "react"
 import { CompanySelector } from "@/components/dashboard/company-selector"
 import { KPICard } from "@/components/dashboard/kpi-card"
@@ -33,7 +36,7 @@ import {
 
 export default function DashboardPage() {
   const [selectedCompany, setSelectedCompany] = useState("all")
-  const { summary, loading } = useKPIs(selectedCompany)
+  const { summary, loading, error } = useKPIs(selectedCompany)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95">
