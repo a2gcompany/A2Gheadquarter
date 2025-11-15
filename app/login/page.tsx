@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -11,22 +11,40 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const router = useRouter()
 
+  useEffect(() => {
+    // Verificar que Supabase está configurado
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!url || !key) {
+      setError('Configuración de Supabase no disponible. Las variables de entorno no están cargadas.')
+      console.error('Missing env vars:', { url: !!url, key: !!key })
+    }
+  }, [])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     try {
+      console.log('Attempting login for:', email)
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('Login error:', error)
+        throw error
+      }
 
+      console.log('Login successful:', data)
       router.push('/dashboard')
       router.refresh()
     } catch (err: any) {
+      console.error('Caught error:', err)
       setError(err.message || 'Error al iniciar sesión')
     } finally {
       setLoading(false)
@@ -59,7 +77,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="tu@email.com"
+              placeholder="a.arevalo@a2g.company"
             />
           </div>
 
@@ -80,11 +98,17 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !!error}
             className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white font-medium rounded-lg transition-colors duration-200 disabled:cursor-not-allowed"
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
+
+          <div className="text-xs text-slate-500 text-center">
+            <p>Vercel env check:</p>
+            <p>URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓' : '✗'}</p>
+            <p>Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓' : '✗'}</p>
+          </div>
         </form>
       </div>
     </div>
