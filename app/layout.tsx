@@ -10,10 +10,6 @@ export const metadata: Metadata = {
   title: "A2G Command Center",
   description: "Enterprise Command Center for Business Intelligence and Analytics",
   manifest: "/manifest.json",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0e1a" },
-  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -39,6 +35,10 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0e1a" },
+  ],
 }
 
 export default function RootLayout({
