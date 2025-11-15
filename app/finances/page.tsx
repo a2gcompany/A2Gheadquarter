@@ -214,7 +214,7 @@ export default function FinancesPage() {
               </TabsContent>
 
               <TabsContent value="analysis" className="p-4">
-                <BarChart
+                <BarChart title="Análisis de Gastos"
                   data={[
                     { category: "Marketing", amount: 12500 },
                     { category: "Viajes", amount: 8200 },
