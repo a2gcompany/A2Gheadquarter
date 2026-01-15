@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
@@ -10,7 +11,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [message, setMessage] = useState('')
-  const supabase = createClient()
+  const supabaseRef = useRef<SupabaseClient | null>(null)
+
+  const getSupabase = () => {
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient()
+    }
+    return supabaseRef.current
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,6 +26,7 @@ export default function LoginPage() {
     setMessage('')
 
     try {
+      const supabase = getSupabase()
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
