@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin, validateAdminClient } from "@/lib/supabase/admin"
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { analyzeDocument } from "@/lib/services/claude-service"
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate environment variables at runtime
-    validateAdminClient()
-    
+    const supabaseAdmin = getSupabaseAdmin()
+
     const formData = await request.formData()
     const file = formData.get("file") as File
     const companySlug = formData.get("companyId") as string
@@ -101,6 +100,8 @@ async function processDocumentAsync(
   companyId: string
 ) {
   try {
+    const supabaseAdmin = getSupabaseAdmin()
+
     // Update status to processing
     await supabaseAdmin
       .from("documents")
@@ -148,6 +149,8 @@ async function processDocumentAsync(
     console.log(`Document ${documentId} processed successfully`)
   } catch (error) {
     console.error(`Error processing document ${documentId}:`, error)
+
+    const supabaseAdmin = getSupabaseAdmin()
 
     // Update document with error
     await supabaseAdmin

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { chatWithData } from "@/lib/services/claude-service"
-import { supabaseAdmin, validateAdminClient } from "@/lib/supabase/admin"
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate environment variables at runtime
-    validateAdminClient()
-    
+    const supabaseAdmin = getSupabaseAdmin()
+
     const { message, companyId, userId } = await request.json()
 
     if (!message || !userId) {
