@@ -1,9 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session } from '@supabase/supabase-js'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
+import { User, Session, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { UserProfile, UserRoleType, Vertical } from '@/lib/types/database'
+import { UserProfile, Vertical } from '@/lib/types/database'
 
 interface AuthContextType {
   user: User | null
@@ -37,10 +37,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [verticals, setVerticals] = useState<Vertical[]>([])
   const [permissions, setPermissions] = useState<VerticalPermission[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const supabaseRef = useRef<SupabaseClient | null>(null)
 
-  const supabase = createClient()
+  // Lazy initialization of Supabase client
+  const getSupabase = () => {
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient()
+    }
+    return supabaseRef.current
+  }
 
   const fetchProfile = async (userId: string) => {
+    const supabase = getSupabase()
     const { data } = await supabase
       .from('user_profiles')
       .select('*')
@@ -51,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const fetchVerticals = async () => {
+    const supabase = getSupabase()
     const { data } = await supabase
       .from('verticals')
       .select('*')
@@ -61,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const fetchPermissions = async (userId: string) => {
+    const supabase = getSupabase()
     const { data } = await supabase
       .from('user_vertical_permissions')
       .select(`
@@ -99,6 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const supabase = getSupabase()
+
     const initAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession()
@@ -156,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = async () => {
+    const supabase = getSupabase()
     await supabase.auth.signOut()
     setUser(null)
     setSession(null)
