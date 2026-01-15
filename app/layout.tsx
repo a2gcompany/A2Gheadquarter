@@ -3,31 +3,32 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/lib/hooks/useAuth"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "A2G Command Center",
-  description: "Enterprise Command Center for Business Intelligence and Analytics",
+  title: "A2G Internal Hub",
+  description: "Plataforma interna de gestion para A2G Company",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "A2G Command Center",
+    title: "A2G Hub",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: "website",
-    siteName: "A2G Command Center",
-    title: "A2G Command Center",
-    description: "Enterprise Command Center for Business Intelligence and Analytics",
+    siteName: "A2G Internal Hub",
+    title: "A2G Internal Hub",
+    description: "Plataforma interna de gestion para A2G Company",
   },
   twitter: {
     card: "summary",
-    title: "A2G Command Center",
-    description: "Enterprise Command Center for Business Intelligence and Analytics",
+    title: "A2G Internal Hub",
+    description: "Plataforma interna de gestion para A2G Company",
   },
 }
 
@@ -47,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
@@ -55,8 +56,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
