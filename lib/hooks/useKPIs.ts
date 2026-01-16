@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { supabase } from "@/lib/supabase/client"
+import { useEffect, useState, useCallback, useMemo } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 interface KPI {
   id: string
@@ -27,6 +27,7 @@ interface KPISummary {
 }
 
 export function useKPIs(companyId: string) {
+  const supabase = useMemo(() => createClient(), [])
   const [kpis, setKpis] = useState<KPI[]>([])
   const [summary, setSummary] = useState<KPISummary>({
     liquidez: 0,
@@ -190,7 +191,7 @@ export function useKPIs(companyId: string) {
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, supabase])
 
   useEffect(() => {
     fetchKPIs()

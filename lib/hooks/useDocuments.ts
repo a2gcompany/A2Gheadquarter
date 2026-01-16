@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { supabase } from "@/lib/supabase/client"
+import { useEffect, useState, useCallback, useMemo } from "react"
+import { createClient } from "@/lib/supabase/client"
 import type { Document } from "@/lib/types/database"
 
 export function useDocuments(companyId: string) {
+  const supabase = useMemo(() => createClient(), [])
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +39,7 @@ export function useDocuments(companyId: string) {
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, supabase])
 
   useEffect(() => {
     fetchDocuments()
