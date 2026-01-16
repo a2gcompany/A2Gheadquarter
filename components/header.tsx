@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
 
 export function Header() {
@@ -10,6 +10,7 @@ export function Header() {
 
   const handleLogout = async () => {
     setLoading(true)
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
