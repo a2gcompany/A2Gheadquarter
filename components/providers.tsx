@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode } from 'react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/hooks/useAuth'
 import { Toaster } from '@/components/ui/toaster'
@@ -10,12 +10,6 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   return (
     <ThemeProvider
       attribute="class"
@@ -23,17 +17,10 @@ export function Providers({ children }: ProvidersProps) {
       enableSystem
       disableTransitionOnChange
     >
-      {mounted ? (
-        <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
-      ) : (
-        <>
-          {children}
-          <Toaster />
-        </>
-      )}
+      <AuthProvider>
+        {children}
+        <Toaster />
+      </AuthProvider>
     </ThemeProvider>
   )
 }
