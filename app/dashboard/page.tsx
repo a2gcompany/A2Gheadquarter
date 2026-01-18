@@ -41,7 +41,7 @@ export default function DashboardPage() {
         onCompanyChange={setSelectedCompany}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* KPIs Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <KPICard
                 title="Liquidez Total"
                 value={summary.liquidez > 0 ? formatCurrency(summary.liquidez, "EUR") : "Sin datos"}
@@ -78,7 +78,7 @@ export default function DashboardPage() {
 
             {/* Charts Grid */}
             {(summary.liquidityData.length > 0 || summary.revenueByCompany.length > 0) && (
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
                 <LineChart
                   title="Evolucion de Liquidez"
                   description="Basado en documentos analizados"
@@ -89,7 +89,7 @@ export default function DashboardPage() {
                     { dataKey: "objetivo", stroke: "#94a3b8", name: "Objetivo", strokeWidth: 1 },
                   ]}
                   valueFormatter={(value) => formatCurrency(value, "EUR", "es-ES")}
-                  height={350}
+                  height={300}
                 />
                 <BarChart
                   title="Revenue por Empresa"
@@ -100,7 +100,7 @@ export default function DashboardPage() {
                     { dataKey: "revenue", fill: "#3b82f6", name: "Revenue" },
                   ]}
                   valueFormatter={(value) => formatCurrency(value, "EUR", "es-ES")}
-                  height={350}
+                  height={300}
                 />
               </div>
             )}
@@ -115,26 +115,26 @@ export default function DashboardPage() {
                   { dataKey: "amount", fill: "#f59e0b", name: "Gastos" },
                 ]}
                 valueFormatter={(value) => formatCurrency(value, "EUR", "es-ES")}
-                height={350}
+                height={300}
               />
             )}
 
             {/* Empty State */}
             {summary.liquidez === 0 && summary.revenue === 0 && (
-              <div className="text-center py-12 bg-card border border-border/50 rounded-lg">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No hay KPIs disponibles</h3>
+              <div className="text-center py-8 sm:py-12 px-4 bg-card border border-border/50 rounded-lg">
+                <AlertCircle className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-base sm:text-lg font-semibold mb-2">No hay KPIs disponibles</h3>
                 <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-                  Sube documentos financieros (estados financieros, P&L, balance sheets, etc.) y la IA extraera automaticamente los KPIs y metricas importantes.
+                  Sube documentos financieros y la IA extraera automaticamente los KPIs.
                 </p>
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button className="gap-2">
                       <Upload className="h-4 w-4" />
-                      Subir Primer Documento
+                      Subir Documento
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-2xl mx-4">
                     <DialogHeader>
                       <DialogTitle>Subir Documento</DialogTitle>
                       <DialogDescription>
@@ -148,15 +148,15 @@ export default function DashboardPage() {
             )}
 
             {/* Documents Section */}
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-6">
+            <div className="mt-6 sm:mt-8">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <div>
-                  <h2 className="text-xl font-bold flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
                     <FileText className="h-5 w-5" />
                     Documentos
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Gestiona y analiza tus documentos empresariales
+                    Gestiona tus documentos empresariales
                   </p>
                 </div>
               </div>
