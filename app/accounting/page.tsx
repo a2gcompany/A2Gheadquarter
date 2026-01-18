@@ -99,6 +99,7 @@ export default function AccountingPage() {
                 setTab("transactions")
               }
             }}
+            onProjectCreated={loadProjects}
           />
 
           {selectedProjectId !== "all" && (

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Building2, Music } from "lucide-react"
+import { Plus, Building2, Music, AlertCircle } from "lucide-react"
 import { type Project, type ProjectType } from "@/src/db/schema"
 import { createProject } from "@/src/actions/projects"
 
@@ -28,28 +28,38 @@ interface ProjectSelectorProps {
   projects: Project[]
   value: string
   onValueChange: (value: string) => void
+  onProjectCreated?: () => void
 }
 
-export function ProjectSelector({ projects, value, onValueChange }: ProjectSelectorProps) {
+export function ProjectSelector({ projects, value, onValueChange, onProjectCreated }: ProjectSelectorProps) {
   const [open, setOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState("")
   const [newProjectType, setNewProjectType] = useState<ProjectType>("vertical")
   const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return
 
     setIsCreating(true)
+    setError(null)
     try {
       const project = await createProject({
         name: newProjectName.trim(),
         type: newProjectType,
       })
       if (project) {
+        // First refresh the projects list, then select the new project
+        onProjectCreated?.()
         onValueChange(project.id)
         setNewProjectName("")
         setOpen(false)
+      } else {
+        setError("Error al crear el proyecto. Verifica la conexión a la base de datos.")
       }
+    } catch (error) {
+      console.error("Error creating project:", error)
+      setError("Error al crear el proyecto. Verifica que DATABASE_URL esté configurado.")
     } finally {
       setIsCreating(false)
     }
@@ -96,7 +106,10 @@ export function ProjectSelector({ projects, value, onValueChange }: ProjectSelec
         </SelectContent>
       </Select>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen)
+        if (!isOpen) setError(null)
+      }}>
         <DialogTrigger asChild>
           <Button variant="outline" size="icon">
             <Plus className="h-4 w-4" />
@@ -110,6 +123,12 @@ export function ProjectSelector({ projects, value, onValueChange }: ProjectSelec
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-red-500 bg-red-500/10 p-3 rounded-md">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Nombre</Label>
               <Input
