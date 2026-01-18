@@ -1,7 +1,7 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUp, ArrowDown } from "lucide-react"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { TrendingUp, TrendingDown, Bookmark, MessageSquare, Users, DollarSign } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface KPICardProps {
@@ -9,34 +9,58 @@ interface KPICardProps {
   value: string
   change?: number
   changeLabel?: string
-  icon: React.ReactNode
+  icon?: React.ReactNode
   trend?: "up" | "down"
+  variant?: "default" | "revenue" | "clients" | "leads" | "team"
 }
 
-export function KPICard({ title, value, change, changeLabel, icon, trend }: KPICardProps) {
+export function KPICard({
+  title,
+  value,
+  change,
+  changeLabel,
+  icon,
+  trend,
+  variant = "default"
+}: KPICardProps) {
+  const trendColor = trend === "up"
+    ? "text-emerald-400"
+    : trend === "down"
+      ? "text-rose-400"
+      : "text-muted-foreground"
+
+  const trendBgColor = trend === "up"
+    ? "bg-emerald-400/10"
+    : trend === "down"
+      ? "bg-rose-400/10"
+      : "bg-muted"
+
   return (
-    <Card className="glass hover:border-primary/50 transition-colors">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-          {icon}
+    <Card className="bg-card border-border/50 hover:border-border transition-colors">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+        <span className="text-sm font-medium text-muted-foreground">{title}</span>
+        <div className="text-muted-foreground/60">
+          {icon || <Bookmark className="h-4 w-4" />}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {change !== undefined && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-            {trend === "up" && <ArrowUp className="h-3 w-3 text-green-500" />}
-            {trend === "down" && <ArrowDown className="h-3 w-3 text-red-500" />}
-            <span className={cn(
-              trend === "up" && "text-green-500",
-              trend === "down" && "text-red-500"
+      <CardContent className="px-4 pb-4">
+        <div className="flex items-end justify-between">
+          <div className="text-2xl font-bold tracking-tight">{value}</div>
+          {change !== undefined && (
+            <div className={cn(
+              "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+              trendBgColor,
+              trendColor
             )}>
-              {change > 0 ? "+" : ""}{change.toFixed(1)}%
-            </span>
-            {changeLabel && <span>{changeLabel}</span>}
-          </div>
-        )}
+              {trend === "up" ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : trend === "down" ? (
+                <TrendingDown className="h-3 w-3" />
+              ) : null}
+              <span>{change > 0 ? "+" : ""}{change}%</span>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

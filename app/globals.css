@@ -24,29 +24,57 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Sidebar colors - light mode */
+    --sidebar: 220 14% 96%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-accent: 220 14% 92%;
+
+    /* Status colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
   }
 
   .dark {
-    /* Palantir-inspired dark theme */
-    --background: 222 47% 4%;
+    /* Modern dark theme inspired by Square UI */
+    --background: 220 20% 10%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 6%;
+    --card: 220 20% 13%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 6%;
+    --popover: 220 20% 13%;
     --popover-foreground: 210 40% 98%;
     --primary: 210 100% 60%;
-    --primary-foreground: 222 47% 4%;
-    --secondary: 222 47% 10%;
+    --primary-foreground: 220 20% 10%;
+    --secondary: 220 20% 16%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 222 47% 10%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 215 20% 55%;
     --accent: 217 91% 60%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 12%;
-    --input: 222 47% 12%;
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
     --ring: 212 100% 60%;
+
+    /* Sidebar colors - dark mode */
+    --sidebar: 220 20% 8%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 220 20% 14%;
+    --sidebar-accent: 220 20% 14%;
+
+    /* Status colors */
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 58%;
+    --info-foreground: 0 0% 100%;
   }
 }
 
@@ -62,20 +90,20 @@
 
 /* Custom scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-background;
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/30 rounded-full;
+  @apply bg-muted-foreground/20 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground/50;
+  @apply bg-muted-foreground/40;
 }
 
 /* Glassmorphism effect */
@@ -120,15 +148,6 @@
 
 .recharts-tooltip-wrapper {
   @apply outline-none;
-}
-
-/* Map styling */
-.mapboxgl-popup-content {
-  @apply bg-card text-card-foreground rounded-lg shadow-lg border border-border p-4;
-}
-
-.mapboxgl-popup-close-button {
-  @apply text-foreground hover:text-primary;
 }
 
 /* Animation utilities */
@@ -196,4 +215,65 @@
 
 .metric-updated {
   animation: metric-update 0.3s ease-in-out;
+}
+
+/* Score bar */
+.score-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: hsl(var(--muted));
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Status badges */
+.status-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-badge-closed {
+  @apply bg-success/20 text-success;
+}
+
+.status-badge-lost {
+  @apply bg-destructive/20 text-destructive;
+}
+
+.status-badge-warm {
+  @apply bg-warning/20 text-warning;
+}
+
+.status-badge-cold {
+  @apply bg-info/20 text-info;
+}
+
+/* Avatar group */
+.avatar-group {
+  @apply flex -space-x-2;
+}
+
+.avatar-group > * {
+  @apply ring-2 ring-background;
+}
+
+/* Table styling */
+.data-table {
+  @apply w-full;
+}
+
+.data-table th {
+  @apply text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 border-b border-border;
+}
+
+.data-table td {
+  @apply px-4 py-3 border-b border-border/50;
+}
+
+.data-table tr:hover {
+  @apply bg-muted/30;
 }
