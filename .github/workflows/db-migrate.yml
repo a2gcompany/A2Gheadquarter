@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Push schema to database
-        run: npm run db:push
+        run: node scripts/create-missing.mjs
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
