@@ -36,7 +36,6 @@ const navItems: NavItem[] = [
     name: "Releases",
     href: "/releases",
     icon: <Music className="h-5 w-5" />,
-    comingSoon: true,
   },
   {
     name: "Bookings",
