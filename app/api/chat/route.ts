@@ -1,87 +1,90 @@
 import { NextRequest, NextResponse } from "next/server"
 import { chatWithData } from "@/lib/services/claude-service"
-import { supabaseAdmin, validateAdminClient } from "@/lib/supabase/admin"
+import { db, projects, transactions, releases, bookings } from "@/src/db"
+import { eq, desc } from "drizzle-orm"
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate environment variables at runtime
-    validateAdminClient()
-    
-    const { message, companyId, userId } = await request.json()
+    const { message, projectId } = await request.json()
 
-    if (!message || !userId) {
+    if (!message) {
       return NextResponse.json(
-        { error: "Message and userId are required" },
+        { error: "Message is required" },
         { status: 400 }
       )
     }
 
-    // Fetch relevant context
-    const context: any = {}
+    // Fetch relevant context using Drizzle
+    const context: Record<string, unknown> = {}
 
-    if (companyId && companyId !== "all") {
-      // Fetch company data
-      const { data: company } = await supabaseAdmin
-        .from("companies")
-        .select("*")
-        .eq("slug", companyId)
-        .single()
+    if (projectId && projectId !== "all") {
+      // Fetch specific project data
+      const projectData = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1)
 
-      context.company = company
+      if (projectData.length > 0) {
+        context.project = projectData[0]
 
-      // Fetch recent transactions
-      const { data: transactions } = await supabaseAdmin
-        .from("transactions")
-        .select("*")
-        .eq("company_id", company?.id)
-        .order("transaction_date", { ascending: false })
+        // Fetch recent transactions for this project
+        const projectTransactions = await db
+          .select()
+          .from(transactions)
+          .where(eq(transactions.projectId, projectId))
+          .orderBy(desc(transactions.date))
+          .limit(100)
+
+        context.transactions = projectTransactions
+
+        // Fetch releases for this project
+        const projectReleases = await db
+          .select()
+          .from(releases)
+          .where(eq(releases.projectId, projectId))
+          .orderBy(desc(releases.createdAt))
+          .limit(50)
+
+        context.releases = projectReleases
+
+        // Fetch bookings for this project
+        const projectBookings = await db
+          .select()
+          .from(bookings)
+          .where(eq(bookings.projectId, projectId))
+          .orderBy(desc(bookings.showDate))
+          .limit(50)
+
+        context.bookings = projectBookings
+      }
+    } else {
+      // Fetch all projects with summary data
+      const allProjects = await db.select().from(projects)
+      context.projects = allProjects
+
+      // Fetch recent transactions across all projects
+      const recentTransactions = await db
+        .select()
+        .from(transactions)
+        .orderBy(desc(transactions.date))
         .limit(100)
 
-      context.transactions = transactions
+      context.recentTransactions = recentTransactions
 
-      // Fetch KPIs
-      const { data: kpis } = await supabaseAdmin
-        .from("kpis_extracted")
-        .select("*")
-        .eq("company_id", company?.id)
-        .order("created_at", { ascending: false })
-        .limit(50)
+      // Calculate summary per project type
+      const artistProjects = allProjects.filter(p => p.type === "artist")
+      const verticalProjects = allProjects.filter(p => p.type === "vertical")
 
-      context.kpis = kpis
-    } else {
-      // Fetch all companies
-      const { data: companies } = await supabaseAdmin
-        .from("companies")
-        .select("*")
-
-      context.companies = companies
-
-      // Fetch financial summary
-      const { data: summary } = await supabaseAdmin
-        .from("company_financial_summary")
-        .select("*")
-
-      context.financialSummary = summary
+      context.summary = {
+        totalProjects: allProjects.length,
+        artistProjects: artistProjects.length,
+        verticalProjects: verticalProjects.length,
+      }
     }
 
     // Get AI response
     const response = await chatWithData(message, context)
-
-    // Save chat history
-    await supabaseAdmin.from("ai_chat_history").insert([
-      {
-        user_id: userId,
-        company_id: companyId !== "all" ? companyId : null,
-        message_type: "user",
-        message,
-      },
-      {
-        user_id: userId,
-        company_id: companyId !== "all" ? companyId : null,
-        message_type: "assistant",
-        message: response,
-      },
-    ])
 
     return NextResponse.json({ response })
   } catch (error) {
