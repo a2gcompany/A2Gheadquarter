@@ -15,24 +15,45 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
+  Disc,
+  Clock,
 } from "lucide-react"
 import { getProjects } from "@/src/actions/projects"
 import { getAllProjectsPL } from "@/src/actions/transactions"
-import { type Project } from "@/src/db/schema"
+import { getReleasesStats } from "@/src/actions/releases"
+import { getBookingsStats, getUpcomingBookings } from "@/src/actions/bookings"
+import { type Project, type Booking } from "@/src/db/schema"
 import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [totals, setTotals] = useState({ income: 0, expense: 0, balance: 0 })
+  const [releasesStats, setReleasesStats] = useState({ total: 0, draft: 0, shopping: 0, accepted: 0, released: 0 })
+  const [bookingsStats, setBookingsStats] = useState({
+    total: 0,
+    negotiating: 0,
+    confirmed: 0,
+    contracted: 0,
+    completed: 0,
+    cancelled: 0,
+    totalRevenue: 0,
+  })
+  const [upcomingBookings, setUpcomingBookings] = useState<(Booking & { projectName: string })[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadData() {
-      const [projectsData, plData] = await Promise.all([
+      const [projectsData, plData, relStats, bookStats, upcoming] = await Promise.all([
         getProjects(),
         getAllProjectsPL(),
+        getReleasesStats(),
+        getBookingsStats(),
+        getUpcomingBookings(3),
       ])
       setProjects(projectsData)
+      setReleasesStats(relStats)
+      setBookingsStats(bookStats)
+      setUpcomingBookings(upcoming)
 
       const calculatedTotals = plData.reduce(
         (acc, p) => ({
@@ -68,14 +89,14 @@ export default function DashboardPage() {
       description: "Gestiona lanzamientos musicales y contactos con sellos",
       icon: <Music className="h-6 w-6" />,
       href: "/releases",
-      available: false,
+      available: true,
     },
     {
       name: "Bookings",
       description: "Gestiona shows, venues y fees de artistas",
       icon: <CalendarDays className="h-6 w-6" />,
       href: "/bookings",
-      available: false,
+      available: true,
     },
     {
       name: "Reports",
@@ -112,34 +133,6 @@ export default function DashboardPage() {
           <Card className="bg-card border-border/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Ingresos Totales
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-500">
-                {loading ? "..." : `+${formatCurrency(totals.income)} €`}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Gastos Totales
-              </CardTitle>
-              <TrendingDown className="h-4 w-4 text-rose-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-rose-500">
-                {loading ? "..." : `-${formatCurrency(totals.expense)} €`}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Balance Total
               </CardTitle>
               <Wallet className="h-4 w-4 text-muted-foreground" />
@@ -151,9 +144,82 @@ export default function DashboardPage() {
               )}>
                 {loading ? "..." : `${totals.balance >= 0 ? "+" : ""}${formatCurrency(totals.balance)} €`}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                +{formatCurrency(totals.income)} / -{formatCurrency(totals.expense)}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Releases
+              </CardTitle>
+              <Disc className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{releasesStats.total}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {releasesStats.shopping} buscando label, {releasesStats.released} lanzados
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Bookings
+              </CardTitle>
+              <CalendarDays className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{bookingsStats.total}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {bookingsStats.confirmed + bookingsStats.contracted} confirmados, {formatCurrency(bookingsStats.totalRevenue)} € revenue
+              </p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Upcoming Bookings */}
+        {upcomingBookings.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Proximos Shows</h2>
+              <Link href="/bookings">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  Ver todos
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {upcomingBookings.map((booking) => (
+                <Card key={booking.id} className="bg-card border-border/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium">{booking.projectName}</p>
+                        <p className="text-sm text-muted-foreground">{booking.venue}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {booking.city}, {booking.country}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-mono">{booking.showDate}</p>
+                        {booking.fee && (
+                          <p className="text-xs text-emerald-500 mt-1">
+                            {parseFloat(booking.fee).toLocaleString()} {booking.feeCurrency}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Modules */}
         <div>
