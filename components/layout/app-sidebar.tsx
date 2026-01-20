@@ -41,7 +41,6 @@ const navItems: NavItem[] = [
     name: "Bookings",
     href: "/bookings",
     icon: <CalendarDays className="h-5 w-5" />,
-    comingSoon: true,
   },
   {
     name: "Reports",
