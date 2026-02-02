@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { db, releases, projects } from "@/src/db"
-import { eq } from "drizzle-orm"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 
 // Datos del spreadsheet de Google Sheets - Febrero 2026
 const spreadsheetData = [
@@ -70,19 +69,26 @@ export async function GET() {
 
     // 1. Get or create Prophecy project
     results.push("1. Buscando/creando proyecto Prophecy...")
-    let prophecyProjects = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.name, "Prophecy"))
 
-    let prophecyProject = prophecyProjects[0]
+    const { data: existingProject, error: findError } = await supabaseAdmin
+      .from("projects")
+      .select("*")
+      .eq("name", "Prophecy")
+      .single()
 
-    if (!prophecyProject) {
-      const newProject = await db
-        .insert(projects)
-        .values({ name: "Prophecy", type: "artist" })
-        .returning()
-      prophecyProject = newProject[0]
+    let prophecyProject = existingProject
+
+    if (findError || !existingProject) {
+      const { data: newProject, error: createError } = await supabaseAdmin
+        .from("projects")
+        .insert({ name: "Prophecy", type: "artist" })
+        .select()
+        .single()
+
+      if (createError) {
+        throw new Error(`Failed to create project: ${createError.message}`)
+      }
+      prophecyProject = newProject
       results.push("   ✅ Proyecto Prophecy creado")
     } else {
       results.push("   ✅ Proyecto Prophecy encontrado")
@@ -103,8 +109,16 @@ export async function GET() {
 
     // 3. Delete existing releases for Prophecy
     results.push("3. Limpiando releases existentes de Prophecy...")
-    await db.delete(releases).where(eq(releases.projectId, prophecyProject.id))
-    results.push("   ✅ Releases anteriores eliminados")
+    const { error: deleteError } = await supabaseAdmin
+      .from("releases")
+      .delete()
+      .eq("project_id", prophecyProject.id)
+
+    if (deleteError) {
+      results.push(`   ⚠️ Error limpiando: ${deleteError.message}`)
+    } else {
+      results.push("   ✅ Releases anteriores eliminados")
+    }
 
     // 4. Create releases with labels
     results.push("4. Creando releases...")
@@ -118,15 +132,21 @@ export async function GET() {
 
       const releaseStatus = determineReleaseStatus(labelsContacted)
 
-      await db.insert(releases).values({
-        projectId: prophecyProject.id,
-        trackName: trackName,
-        labelsContacted: labelsContacted,
-        status: releaseStatus,
-        notes: `Importado desde spreadsheet ${new Date().toISOString().split('T')[0]}`
-      })
+      const { error: insertError } = await supabaseAdmin
+        .from("releases")
+        .insert({
+          project_id: prophecyProject.id,
+          track_name: trackName,
+          labels_contacted: labelsContacted,
+          status: releaseStatus,
+          notes: `Importado desde spreadsheet ${new Date().toISOString().split('T')[0]}`
+        })
 
-      results.push(`   ✅ "${trackName}" - ${labelsContacted.length} sellos contactados (${releaseStatus})`)
+      if (insertError) {
+        results.push(`   ❌ "${trackName}" - Error: ${insertError.message}`)
+      } else {
+        results.push(`   ✅ "${trackName}" - ${labelsContacted.length} sellos contactados (${releaseStatus})`)
+      }
     }
 
     results.push("")
