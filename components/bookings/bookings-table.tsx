@@ -26,8 +26,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Trash2, Search, MoreHorizontal, Edit, MapPin } from "lucide-react"
-import { type Booking, type BookingStatus } from "@/src/db/schema"
-import { deleteBooking } from "@/src/actions/bookings"
+import { deleteBooking, type Booking } from "@/src/actions/bookings"
+
+type BookingStatus = "negotiating" | "confirmed" | "contracted" | "completed" | "cancelled"
 import { cn } from "@/lib/utils"
 
 type BookingWithProject = Booking & { projectName: string }
@@ -138,7 +139,7 @@ export function BookingsTable({ bookings, onRefresh, onEdit }: BookingsTableProp
                 return (
                   <TableRow key={booking.id}>
                     <TableCell className="font-mono text-xs">
-                      {booking.showDate || "-"}
+                      {booking.show_date || "-"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {booking.projectName}
@@ -160,7 +161,7 @@ export function BookingsTable({ bookings, onRefresh, onEdit }: BookingsTableProp
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {formatFee(booking.fee, booking.feeCurrency)}
+                      {formatFee(booking.fee, booking.fee_currency)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

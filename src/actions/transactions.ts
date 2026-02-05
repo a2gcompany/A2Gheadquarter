@@ -1,17 +1,32 @@
 "use server"
 
-import { db, transactions, projects, type Transaction, type NewTransaction } from "@/src/db"
-import { eq, desc, and, gte, lte, sql } from "drizzle-orm"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+
+export type Transaction = {
+  id: string
+  project_id: string
+  date: string
+  description: string
+  amount: string
+  type: "income" | "expense"
+  category: string | null
+  source_file: string | null
+  created_at: string
+}
+
+export type NewTransaction = Omit<Transaction, "id" | "created_at">
 
 export async function getTransactionsByProject(projectId: string): Promise<Transaction[]> {
   try {
-    const result = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.projectId, projectId))
-      .orderBy(desc(transactions.date))
-    return result
+    const { data, error } = await supabaseAdmin
+      .from("transactions")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("date", { ascending: false })
+
+    if (error) throw error
+    return data || []
   } catch (error) {
     console.error("Error fetching transactions:", error)
     return []
@@ -20,11 +35,13 @@ export async function getTransactionsByProject(projectId: string): Promise<Trans
 
 export async function getAllTransactions(): Promise<Transaction[]> {
   try {
-    const result = await db
-      .select()
-      .from(transactions)
-      .orderBy(desc(transactions.date))
-    return result
+    const { data, error } = await supabaseAdmin
+      .from("transactions")
+      .select("*")
+      .order("date", { ascending: false })
+
+    if (error) throw error
+    return data || []
   } catch (error) {
     console.error("Error fetching transactions:", error)
     return []
@@ -33,9 +50,15 @@ export async function getAllTransactions(): Promise<Transaction[]> {
 
 export async function createTransaction(data: NewTransaction): Promise<Transaction | null> {
   try {
-    const result = await db.insert(transactions).values(data).returning()
+    const { data: result, error } = await supabaseAdmin
+      .from("transactions")
+      .insert(data)
+      .select()
+      .single()
+
+    if (error) throw error
     revalidatePath("/accounting")
-    return result[0] || null
+    return result
   } catch (error) {
     console.error("Error creating transaction:", error)
     return null
@@ -45,9 +68,14 @@ export async function createTransaction(data: NewTransaction): Promise<Transacti
 export async function createManyTransactions(data: NewTransaction[]): Promise<number> {
   try {
     if (data.length === 0) return 0
-    const result = await db.insert(transactions).values(data).returning()
+    const { data: result, error } = await supabaseAdmin
+      .from("transactions")
+      .insert(data)
+      .select()
+
+    if (error) throw error
     revalidatePath("/accounting")
-    return result.length
+    return result?.length || 0
   } catch (error) {
     console.error("Error creating transactions:", error)
     return 0
@@ -56,7 +84,12 @@ export async function createManyTransactions(data: NewTransaction[]): Promise<nu
 
 export async function deleteTransaction(id: string): Promise<boolean> {
   try {
-    await db.delete(transactions).where(eq(transactions.id, id))
+    const { error } = await supabaseAdmin
+      .from("transactions")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
     revalidatePath("/accounting")
     return true
   } catch (error) {
@@ -68,23 +101,22 @@ export async function deleteTransaction(id: string): Promise<boolean> {
 // Get P&L summary for a project
 export async function getProjectPL(projectId: string) {
   try {
-    const result = await db
-      .select({
-        type: transactions.type,
-        total: sql<string>`sum(${transactions.amount})`,
-      })
-      .from(transactions)
-      .where(eq(transactions.projectId, projectId))
-      .groupBy(transactions.type)
+    const { data, error } = await supabaseAdmin
+      .from("transactions")
+      .select("type, amount")
+      .eq("project_id", projectId)
+
+    if (error) throw error
 
     let income = 0
     let expense = 0
 
-    for (const row of result) {
+    for (const row of data || []) {
+      const amount = parseFloat(row.amount || "0")
       if (row.type === "income") {
-        income = parseFloat(row.total || "0")
+        income += amount
       } else if (row.type === "expense") {
-        expense = parseFloat(row.total || "0")
+        expense += amount
       }
     }
 
@@ -102,32 +134,31 @@ export async function getProjectPL(projectId: string) {
 // Get monthly breakdown for a project
 export async function getProjectMonthlyData(projectId: string) {
   try {
-    const result = await db
-      .select({
-        month: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
-        type: transactions.type,
-        total: sql<string>`sum(${transactions.amount})`,
-      })
-      .from(transactions)
-      .where(eq(transactions.projectId, projectId))
-      .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`, transactions.type)
-      .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM')`)
+    const { data, error } = await supabaseAdmin
+      .from("transactions")
+      .select("date, type, amount")
+      .eq("project_id", projectId)
+      .order("date")
+
+    if (error) throw error
 
     // Transform to chart-friendly format
     const monthlyMap: Record<string, { month: string; income: number; expense: number }> = {}
 
-    for (const row of result) {
-      if (!monthlyMap[row.month]) {
-        monthlyMap[row.month] = { month: row.month, income: 0, expense: 0 }
+    for (const row of data || []) {
+      const month = row.date.substring(0, 7) // YYYY-MM
+      if (!monthlyMap[month]) {
+        monthlyMap[month] = { month, income: 0, expense: 0 }
       }
+      const amount = parseFloat(row.amount || "0")
       if (row.type === "income") {
-        monthlyMap[row.month].income = parseFloat(row.total || "0")
+        monthlyMap[month].income += amount
       } else if (row.type === "expense") {
-        monthlyMap[row.month].expense = parseFloat(row.total || "0")
+        monthlyMap[month].expense += amount
       }
     }
 
-    return Object.values(monthlyMap)
+    return Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month))
   } catch (error) {
     console.error("Error fetching monthly data:", error)
     return []
@@ -137,33 +168,36 @@ export async function getProjectMonthlyData(projectId: string) {
 // Get all projects with their P&L
 export async function getAllProjectsPL() {
   try {
-    const projectsList = await db.select().from(projects).orderBy(projects.name)
+    const { data: projectsList, error: projectsError } = await supabaseAdmin
+      .from("projects")
+      .select("*")
+      .order("name")
 
-    const result = await db
-      .select({
-        projectId: transactions.projectId,
-        type: transactions.type,
-        total: sql<string>`sum(${transactions.amount})`,
-      })
-      .from(transactions)
-      .groupBy(transactions.projectId, transactions.type)
+    if (projectsError) throw projectsError
+
+    const { data: transactions, error: txError } = await supabaseAdmin
+      .from("transactions")
+      .select("project_id, type, amount")
+
+    if (txError) throw txError
 
     // Build P&L map
     const plMap: Record<string, { income: number; expense: number }> = {}
 
-    for (const row of result) {
-      if (!plMap[row.projectId]) {
-        plMap[row.projectId] = { income: 0, expense: 0 }
+    for (const row of transactions || []) {
+      if (!plMap[row.project_id]) {
+        plMap[row.project_id] = { income: 0, expense: 0 }
       }
+      const amount = parseFloat(row.amount || "0")
       if (row.type === "income") {
-        plMap[row.projectId].income = parseFloat(row.total || "0")
+        plMap[row.project_id].income += amount
       } else if (row.type === "expense") {
-        plMap[row.projectId].expense = parseFloat(row.total || "0")
+        plMap[row.project_id].expense += amount
       }
     }
 
     // Merge with projects
-    return projectsList.map((project) => ({
+    return (projectsList || []).map((project) => ({
       ...project,
       income: plMap[project.id]?.income || 0,
       expense: plMap[project.id]?.expense || 0,

@@ -1,17 +1,34 @@
 "use server"
 
-import { db, bookings, projects, type Booking, type NewBooking } from "@/src/db"
-import { eq, desc, sql, gte, and } from "drizzle-orm"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+
+export type Booking = {
+  id: string
+  project_id: string
+  venue: string
+  city: string
+  country: string
+  fee: string | null
+  fee_currency: string | null
+  status: "negotiating" | "confirmed" | "contracted" | "completed" | "cancelled"
+  show_date: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type NewBooking = Omit<Booking, "id" | "created_at">
 
 export async function getBookingsByProject(projectId: string): Promise<Booking[]> {
   try {
-    const result = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.projectId, projectId))
-      .orderBy(desc(bookings.showDate))
-    return result
+    const { data, error } = await supabaseAdmin
+      .from("bookings")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("show_date", { ascending: false })
+
+    if (error) throw error
+    return data || []
   } catch (error) {
     console.error("Error fetching bookings:", error)
     return []
@@ -20,11 +37,13 @@ export async function getBookingsByProject(projectId: string): Promise<Booking[]
 
 export async function getAllBookings(): Promise<Booking[]> {
   try {
-    const result = await db
-      .select()
-      .from(bookings)
-      .orderBy(desc(bookings.showDate))
-    return result
+    const { data, error } = await supabaseAdmin
+      .from("bookings")
+      .select("*")
+      .order("show_date", { ascending: false })
+
+    if (error) throw error
+    return data || []
   } catch (error) {
     console.error("Error fetching bookings:", error)
     return []
@@ -33,8 +52,14 @@ export async function getAllBookings(): Promise<Booking[]> {
 
 export async function getBooking(id: string): Promise<Booking | null> {
   try {
-    const result = await db.select().from(bookings).where(eq(bookings.id, id))
-    return result[0] || null
+    const { data, error } = await supabaseAdmin
+      .from("bookings")
+      .select("*")
+      .eq("id", id)
+      .single()
+
+    if (error) throw error
+    return data
   } catch (error) {
     console.error("Error fetching booking:", error)
     return null
@@ -43,9 +68,15 @@ export async function getBooking(id: string): Promise<Booking | null> {
 
 export async function createBooking(data: NewBooking): Promise<Booking | null> {
   try {
-    const result = await db.insert(bookings).values(data).returning()
+    const { data: result, error } = await supabaseAdmin
+      .from("bookings")
+      .insert(data)
+      .select()
+      .single()
+
+    if (error) throw error
     revalidatePath("/bookings")
-    return result[0] || null
+    return result
   } catch (error) {
     console.error("Error creating booking:", error)
     return null
@@ -54,16 +85,19 @@ export async function createBooking(data: NewBooking): Promise<Booking | null> {
 
 export async function updateBooking(
   id: string,
-  data: Partial<Omit<Booking, "id" | "createdAt">>
+  data: Partial<Omit<Booking, "id" | "created_at">>
 ): Promise<Booking | null> {
   try {
-    const result = await db
-      .update(bookings)
-      .set(data)
-      .where(eq(bookings.id, id))
-      .returning()
+    const { data: result, error } = await supabaseAdmin
+      .from("bookings")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
     revalidatePath("/bookings")
-    return result[0] || null
+    return result
   } catch (error) {
     console.error("Error updating booking:", error)
     return null
@@ -72,7 +106,12 @@ export async function updateBooking(
 
 export async function deleteBooking(id: string): Promise<boolean> {
   try {
-    await db.delete(bookings).where(eq(bookings.id, id))
+    const { error } = await supabaseAdmin
+      .from("bookings")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
     revalidatePath("/bookings")
     return true
   } catch (error) {
@@ -84,18 +123,20 @@ export async function deleteBooking(id: string): Promise<boolean> {
 // Get bookings with project info
 export async function getAllBookingsWithProject() {
   try {
-    const result = await db
-      .select({
-        booking: bookings,
-        projectName: projects.name,
-      })
-      .from(bookings)
-      .leftJoin(projects, eq(bookings.projectId, projects.id))
-      .orderBy(desc(bookings.showDate))
+    const { data, error } = await supabaseAdmin
+      .from("bookings")
+      .select(`
+        *,
+        projects (name)
+      `)
+      .order("show_date", { ascending: false })
 
-    return result.map((r) => ({
-      ...r.booking,
-      projectName: r.projectName || "Unknown",
+    if (error) throw error
+
+    return (data || []).map((r: any) => ({
+      ...r,
+      projectName: r.projects?.name || "Unknown",
+      projects: undefined,
     }))
   } catch (error) {
     console.error("Error fetching bookings with project:", error)
@@ -107,25 +148,23 @@ export async function getAllBookingsWithProject() {
 export async function getUpcomingBookings(limit = 10) {
   try {
     const today = new Date().toISOString().split("T")[0]
-    const result = await db
-      .select({
-        booking: bookings,
-        projectName: projects.name,
-      })
-      .from(bookings)
-      .leftJoin(projects, eq(bookings.projectId, projects.id))
-      .where(
-        and(
-          gte(bookings.showDate, today),
-          eq(bookings.status, "confirmed")
-        )
-      )
-      .orderBy(bookings.showDate)
+    const { data, error } = await supabaseAdmin
+      .from("bookings")
+      .select(`
+        *,
+        projects (name)
+      `)
+      .gte("show_date", today)
+      .in("status", ["confirmed", "contracted"])
+      .order("show_date", { ascending: true })
       .limit(limit)
 
-    return result.map((r) => ({
-      ...r.booking,
-      projectName: r.projectName || "Unknown",
+    if (error) throw error
+
+    return (data || []).map((r: any) => ({
+      ...r,
+      projectName: r.projects?.name || "Unknown",
+      projects: undefined,
     }))
   } catch (error) {
     console.error("Error fetching upcoming bookings:", error)

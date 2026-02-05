@@ -9,13 +9,13 @@ import { PLSummary } from "@/components/accounting/pl-summary"
 import { AllProjectsTable } from "@/components/accounting/all-projects-table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2 } from "lucide-react"
-import { type Project, type Transaction } from "@/src/db/schema"
-import { getProjects } from "@/src/actions/projects"
+import { getProjects, type Project } from "@/src/actions/projects"
 import {
   getTransactionsByProject,
   getProjectPL,
   getProjectMonthlyData,
   getAllProjectsPL,
+  type Transaction,
 } from "@/src/actions/transactions"
 
 export default function AccountingPage() {

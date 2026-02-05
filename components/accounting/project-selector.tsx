@@ -21,8 +21,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Plus, Building2, Music, AlertCircle } from "lucide-react"
-import { type Project, type ProjectType } from "@/src/db/schema"
-import { createProject } from "@/src/actions/projects"
+import { createProject, type Project } from "@/src/actions/projects"
+
+type ProjectType = "artist" | "vertical"
 
 interface ProjectSelectorProps {
   projects: Project[]

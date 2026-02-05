@@ -1,13 +1,26 @@
 "use server"
 
-import { db, projects, type Project, type NewProject } from "@/src/db"
-import { eq } from "drizzle-orm"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+
+export type Project = {
+  id: string
+  name: string
+  type: "artist" | "vertical"
+  created_at: string
+}
+
+export type NewProject = Omit<Project, "id" | "created_at">
 
 export async function getProjects(): Promise<Project[]> {
   try {
-    const result = await db.select().from(projects).orderBy(projects.name)
-    return result
+    const { data, error } = await supabaseAdmin
+      .from("projects")
+      .select("*")
+      .order("name")
+
+    if (error) throw error
+    return data || []
   } catch (error) {
     console.error("Error fetching projects:", error)
     return []
@@ -16,8 +29,14 @@ export async function getProjects(): Promise<Project[]> {
 
 export async function getProject(id: string): Promise<Project | null> {
   try {
-    const result = await db.select().from(projects).where(eq(projects.id, id))
-    return result[0] || null
+    const { data, error } = await supabaseAdmin
+      .from("projects")
+      .select("*")
+      .eq("id", id)
+      .single()
+
+    if (error) throw error
+    return data
   } catch (error) {
     console.error("Error fetching project:", error)
     return null
@@ -26,10 +45,16 @@ export async function getProject(id: string): Promise<Project | null> {
 
 export async function createProject(data: NewProject): Promise<Project | null> {
   try {
-    const result = await db.insert(projects).values(data).returning()
+    const { data: result, error } = await supabaseAdmin
+      .from("projects")
+      .insert(data)
+      .select()
+      .single()
+
+    if (error) throw error
     revalidatePath("/")
     revalidatePath("/accounting")
-    return result[0] || null
+    return result
   } catch (error) {
     console.error("Error creating project:", error)
     return null
@@ -38,7 +63,12 @@ export async function createProject(data: NewProject): Promise<Project | null> {
 
 export async function deleteProject(id: string): Promise<boolean> {
   try {
-    await db.delete(projects).where(eq(projects.id, id))
+    const { error } = await supabaseAdmin
+      .from("projects")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
     revalidatePath("/")
     revalidatePath("/accounting")
     return true

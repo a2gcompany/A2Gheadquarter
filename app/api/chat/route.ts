@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { chatWithData } from "@/lib/services/claude-service"
-import { db, projects, transactions, releases, bookings } from "@/src/db"
-import { eq, desc } from "drizzle-orm"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,70 +13,74 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch relevant context using Drizzle
+    // Fetch relevant context using Supabase
     const context: Record<string, unknown> = {}
 
     if (projectId && projectId !== "all") {
       // Fetch specific project data
-      const projectData = await db
-        .select()
-        .from(projects)
-        .where(eq(projects.id, projectId))
-        .limit(1)
+      const { data: projectData } = await supabaseAdmin
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .single()
 
-      if (projectData.length > 0) {
-        context.project = projectData[0]
+      if (projectData) {
+        context.project = projectData
 
         // Fetch recent transactions for this project
-        const projectTransactions = await db
-          .select()
-          .from(transactions)
-          .where(eq(transactions.projectId, projectId))
-          .orderBy(desc(transactions.date))
+        const { data: projectTransactions } = await supabaseAdmin
+          .from("transactions")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("date", { ascending: false })
           .limit(100)
 
         context.transactions = projectTransactions
 
         // Fetch releases for this project
-        const projectReleases = await db
-          .select()
-          .from(releases)
-          .where(eq(releases.projectId, projectId))
-          .orderBy(desc(releases.createdAt))
+        const { data: projectReleases } = await supabaseAdmin
+          .from("releases")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
           .limit(50)
 
         context.releases = projectReleases
 
         // Fetch bookings for this project
-        const projectBookings = await db
-          .select()
-          .from(bookings)
-          .where(eq(bookings.projectId, projectId))
-          .orderBy(desc(bookings.showDate))
+        const { data: projectBookings } = await supabaseAdmin
+          .from("bookings")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("show_date", { ascending: false })
           .limit(50)
 
         context.bookings = projectBookings
       }
     } else {
       // Fetch all projects with summary data
-      const allProjects = await db.select().from(projects)
-      context.projects = allProjects
+      const { data: allProjects } = await supabaseAdmin
+        .from("projects")
+        .select("*")
+
+      context.projects = allProjects || []
 
       // Fetch recent transactions across all projects
-      const recentTransactions = await db
-        .select()
-        .from(transactions)
-        .orderBy(desc(transactions.date))
+      const { data: recentTransactions } = await supabaseAdmin
+        .from("transactions")
+        .select("*")
+        .order("date", { ascending: false })
         .limit(100)
 
-      context.recentTransactions = recentTransactions
+      context.recentTransactions = recentTransactions || []
 
       // Calculate summary per project type
-      const artistProjects = allProjects.filter(p => p.type === "artist")
-      const verticalProjects = allProjects.filter(p => p.type === "vertical")
+      const projects = allProjects || []
+      const artistProjects = projects.filter((p: any) => p.type === "artist")
+      const verticalProjects = projects.filter((p: any) => p.type === "vertical")
 
       context.summary = {
-        totalProjects: allProjects.length,
+        totalProjects: projects.length,
         artistProjects: artistProjects.length,
         verticalProjects: verticalProjects.length,
       }

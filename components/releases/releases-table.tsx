@@ -26,8 +26,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Trash2, Search, MoreHorizontal, Eye, Edit } from "lucide-react"
-import { type Release, type ReleaseStatus } from "@/src/db/schema"
-import { deleteRelease } from "@/src/actions/releases"
+import { deleteRelease, type Release } from "@/src/actions/releases"
+
+type ReleaseStatus = "draft" | "shopping" | "accepted" | "released"
 import { cn } from "@/lib/utils"
 
 type ReleaseWithProject = Release & { projectName: string }
@@ -53,7 +54,7 @@ export function ReleasesTable({ releases, onRefresh, onEdit, onViewLabels }: Rel
   const filtered = useMemo(() => {
     return releases.filter((r) => {
       const matchesSearch = search === "" ||
-        r.trackName.toLowerCase().includes(search.toLowerCase()) ||
+        r.track_name.toLowerCase().includes(search.toLowerCase()) ||
         r.projectName.toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === "all" || r.status === statusFilter
       return matchesSearch && matchesStatus
@@ -124,12 +125,12 @@ export function ReleasesTable({ releases, onRefresh, onEdit, onViewLabels }: Rel
             </TableHeader>
             <TableBody>
               {filtered.map((release) => {
-                const labelsCount = (release.labelsContacted || []).length
+                const labelsCount = (release.labels_contacted || []).length
                 const config = statusConfig[release.status]
                 return (
                   <TableRow key={release.id}>
                     <TableCell className="font-medium">
-                      {release.trackName}
+                      {release.track_name}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {release.projectName}
@@ -156,7 +157,7 @@ export function ReleasesTable({ releases, onRefresh, onEdit, onViewLabels }: Rel
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {release.releaseDate || "-"}
+                      {release.release_date || "-"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

@@ -1,17 +1,38 @@
 "use server"
 
-import { db, releases, projects, type Release, type NewRelease, type LabelContact } from "@/src/db"
-import { eq, desc, sql } from "drizzle-orm"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+
+export type LabelContact = {
+  label: string
+  status: "pending" | "waiting" | "rejected" | "accepted"
+  date: string
+  notes?: string
+}
+
+export type Release = {
+  id: string
+  project_id: string
+  track_name: string
+  labels_contacted: LabelContact[] | null
+  status: "draft" | "shopping" | "accepted" | "released"
+  release_date: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type NewRelease = Omit<Release, "id" | "created_at">
 
 export async function getReleasesByProject(projectId: string): Promise<Release[]> {
   try {
-    const result = await db
-      .select()
-      .from(releases)
-      .where(eq(releases.projectId, projectId))
-      .orderBy(desc(releases.createdAt))
-    return result
+    const { data, error } = await supabaseAdmin
+      .from("releases")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data || []
   } catch (error) {
     console.error("Error fetching releases:", error)
     return []
@@ -20,11 +41,13 @@ export async function getReleasesByProject(projectId: string): Promise<Release[]
 
 export async function getAllReleases(): Promise<Release[]> {
   try {
-    const result = await db
-      .select()
-      .from(releases)
-      .orderBy(desc(releases.createdAt))
-    return result
+    const { data, error } = await supabaseAdmin
+      .from("releases")
+      .select("*")
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data || []
   } catch (error) {
     console.error("Error fetching releases:", error)
     return []
@@ -33,8 +56,14 @@ export async function getAllReleases(): Promise<Release[]> {
 
 export async function getRelease(id: string): Promise<Release | null> {
   try {
-    const result = await db.select().from(releases).where(eq(releases.id, id))
-    return result[0] || null
+    const { data, error } = await supabaseAdmin
+      .from("releases")
+      .select("*")
+      .eq("id", id)
+      .single()
+
+    if (error) throw error
+    return data
   } catch (error) {
     console.error("Error fetching release:", error)
     return null
@@ -43,9 +72,15 @@ export async function getRelease(id: string): Promise<Release | null> {
 
 export async function createRelease(data: NewRelease): Promise<Release | null> {
   try {
-    const result = await db.insert(releases).values(data).returning()
+    const { data: result, error } = await supabaseAdmin
+      .from("releases")
+      .insert(data)
+      .select()
+      .single()
+
+    if (error) throw error
     revalidatePath("/releases")
-    return result[0] || null
+    return result
   } catch (error) {
     console.error("Error creating release:", error)
     return null
@@ -54,16 +89,19 @@ export async function createRelease(data: NewRelease): Promise<Release | null> {
 
 export async function updateRelease(
   id: string,
-  data: Partial<Omit<Release, "id" | "createdAt">>
+  data: Partial<Omit<Release, "id" | "created_at">>
 ): Promise<Release | null> {
   try {
-    const result = await db
-      .update(releases)
-      .set(data)
-      .where(eq(releases.id, id))
-      .returning()
+    const { data: result, error } = await supabaseAdmin
+      .from("releases")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
     revalidatePath("/releases")
-    return result[0] || null
+    return result
   } catch (error) {
     console.error("Error updating release:", error)
     return null
@@ -72,7 +110,12 @@ export async function updateRelease(
 
 export async function deleteRelease(id: string): Promise<boolean> {
   try {
-    await db.delete(releases).where(eq(releases.id, id))
+    const { error } = await supabaseAdmin
+      .from("releases")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
     revalidatePath("/releases")
     return true
   } catch (error) {
@@ -89,10 +132,10 @@ export async function addLabelContact(
     const release = await getRelease(releaseId)
     if (!release) return null
 
-    const currentContacts = (release.labelsContacted || []) as LabelContact[]
+    const currentContacts = (release.labels_contacted || []) as LabelContact[]
     const updatedContacts = [...currentContacts, contact]
 
-    return await updateRelease(releaseId, { labelsContacted: updatedContacts })
+    return await updateRelease(releaseId, { labels_contacted: updatedContacts })
   } catch (error) {
     console.error("Error adding label contact:", error)
     return null
@@ -108,12 +151,12 @@ export async function updateLabelContact(
     const release = await getRelease(releaseId)
     if (!release) return null
 
-    const currentContacts = (release.labelsContacted || []) as LabelContact[]
+    const currentContacts = (release.labels_contacted || []) as LabelContact[]
     const updatedContacts = currentContacts.map((c) =>
       c.label === labelName ? { ...c, ...updates } : c
     )
 
-    return await updateRelease(releaseId, { labelsContacted: updatedContacts })
+    return await updateRelease(releaseId, { labels_contacted: updatedContacts })
   } catch (error) {
     console.error("Error updating label contact:", error)
     return null
@@ -128,10 +171,10 @@ export async function removeLabelContact(
     const release = await getRelease(releaseId)
     if (!release) return null
 
-    const currentContacts = (release.labelsContacted || []) as LabelContact[]
+    const currentContacts = (release.labels_contacted || []) as LabelContact[]
     const updatedContacts = currentContacts.filter((c) => c.label !== labelName)
 
-    return await updateRelease(releaseId, { labelsContacted: updatedContacts })
+    return await updateRelease(releaseId, { labels_contacted: updatedContacts })
   } catch (error) {
     console.error("Error removing label contact:", error)
     return null
@@ -141,18 +184,20 @@ export async function removeLabelContact(
 // Get releases with project info
 export async function getAllReleasesWithProject() {
   try {
-    const result = await db
-      .select({
-        release: releases,
-        projectName: projects.name,
-      })
-      .from(releases)
-      .leftJoin(projects, eq(releases.projectId, projects.id))
-      .orderBy(desc(releases.createdAt))
+    const { data, error } = await supabaseAdmin
+      .from("releases")
+      .select(`
+        *,
+        projects (name)
+      `)
+      .order("created_at", { ascending: false })
 
-    return result.map((r) => ({
-      ...r.release,
-      projectName: r.projectName || "Unknown",
+    if (error) throw error
+
+    return (data || []).map((r: any) => ({
+      ...r,
+      projectName: r.projects?.name || "Unknown",
+      projects: undefined,
     }))
   } catch (error) {
     console.error("Error fetching releases with project:", error)

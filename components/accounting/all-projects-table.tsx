@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Building2, Music } from "lucide-react"
-import { type Project } from "@/src/db/schema"
+import { type Project } from "@/src/actions/projects"
 import { cn } from "@/lib/utils"
 
 interface ProjectWithPL extends Project {

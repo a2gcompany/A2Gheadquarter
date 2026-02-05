@@ -21,8 +21,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { AlertCircle, Music } from "lucide-react"
-import { type Project, type Booking, type BookingStatus } from "@/src/db/schema"
-import { createBooking, updateBooking } from "@/src/actions/bookings"
+import { type Project } from "@/src/actions/projects"
+import { createBooking, updateBooking, type Booking } from "@/src/actions/bookings"
+
+type BookingStatus = "negotiating" | "confirmed" | "contracted" | "completed" | "cancelled"
 
 interface BookingFormProps {
   open: boolean
@@ -37,14 +39,14 @@ const currencies = ["EUR", "USD", "GBP", "AED", "CHF"]
 export function BookingForm({ open, onOpenChange, projects, booking, onSuccess }: BookingFormProps) {
   const isEditing = !!booking
 
-  const [projectId, setProjectId] = useState(booking?.projectId || "")
+  const [projectId, setProjectId] = useState(booking?.project_id || "")
   const [venue, setVenue] = useState(booking?.venue || "")
   const [city, setCity] = useState(booking?.city || "")
   const [country, setCountry] = useState(booking?.country || "")
   const [fee, setFee] = useState(booking?.fee || "")
-  const [feeCurrency, setFeeCurrency] = useState(booking?.feeCurrency || "EUR")
+  const [feeCurrency, setFeeCurrency] = useState(booking?.fee_currency || "EUR")
   const [status, setStatus] = useState<BookingStatus>(booking?.status || "negotiating")
-  const [showDate, setShowDate] = useState(booking?.showDate || "")
+  const [showDate, setShowDate] = useState(booking?.show_date || "")
   const [notes, setNotes] = useState(booking?.notes || "")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -61,14 +63,14 @@ export function BookingForm({ open, onOpenChange, projects, booking, onSuccess }
     try {
       if (isEditing && booking) {
         const updated = await updateBooking(booking.id, {
-          projectId,
+          project_id: projectId,
           venue: venue.trim(),
           city: city.trim(),
           country: country.trim(),
           fee: fee || null,
-          feeCurrency,
+          fee_currency: feeCurrency,
           status,
-          showDate: showDate || null,
+          show_date: showDate || null,
           notes: notes || null,
         })
         if (!updated) {
@@ -77,14 +79,14 @@ export function BookingForm({ open, onOpenChange, projects, booking, onSuccess }
         }
       } else {
         const created = await createBooking({
-          projectId,
+          project_id: projectId,
           venue: venue.trim(),
           city: city.trim(),
           country: country.trim(),
           fee: fee || null,
-          feeCurrency,
+          fee_currency: feeCurrency,
           status,
-          showDate: showDate || null,
+          show_date: showDate || null,
           notes: notes || null,
         })
         if (!created) {
@@ -121,14 +123,14 @@ export function BookingForm({ open, onOpenChange, projects, booking, onSuccess }
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen && booking) {
-      setProjectId(booking.projectId)
+      setProjectId(booking.project_id)
       setVenue(booking.venue)
       setCity(booking.city)
       setCountry(booking.country)
       setFee(booking.fee || "")
-      setFeeCurrency(booking.feeCurrency || "EUR")
+      setFeeCurrency(booking.fee_currency || "EUR")
       setStatus(booking.status)
-      setShowDate(booking.showDate || "")
+      setShowDate(booking.show_date || "")
       setNotes(booking.notes || "")
     } else if (!isOpen) {
       resetForm()

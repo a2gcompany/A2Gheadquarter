@@ -8,9 +8,8 @@ import { ReleaseForm } from "@/components/releases/release-form"
 import { LabelsDialog } from "@/components/releases/labels-dialog"
 import { Button } from "@/components/ui/button"
 import { Loader2, Plus } from "lucide-react"
-import { type Project, type Release } from "@/src/db/schema"
-import { getProjects } from "@/src/actions/projects"
-import { getAllReleasesWithProject, getReleasesStats } from "@/src/actions/releases"
+import { getProjects, type Project } from "@/src/actions/projects"
+import { getAllReleasesWithProject, getReleasesStats, type Release } from "@/src/actions/releases"
 
 export default function ReleasesPage() {
   const [projects, setProjects] = useState<Project[]>([])

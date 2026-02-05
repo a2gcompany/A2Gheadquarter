@@ -18,11 +18,10 @@ import {
   Disc,
   Clock,
 } from "lucide-react"
-import { getProjects } from "@/src/actions/projects"
+import { getProjects, type Project } from "@/src/actions/projects"
 import { getAllProjectsPL } from "@/src/actions/transactions"
 import { getReleasesStats } from "@/src/actions/releases"
-import { getBookingsStats, getUpcomingBookings } from "@/src/actions/bookings"
-import { type Project, type Booking } from "@/src/db/schema"
+import { getBookingsStats, getUpcomingBookings, type Booking } from "@/src/actions/bookings"
 import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
@@ -206,10 +205,10 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-mono">{booking.showDate}</p>
+                        <p className="text-sm font-mono">{booking.show_date}</p>
                         {booking.fee && (
                           <p className="text-xs text-emerald-500 mt-1">
-                            {parseFloat(booking.fee).toLocaleString()} {booking.feeCurrency}
+                            {parseFloat(booking.fee).toLocaleString()} {booking.fee_currency}
                           </p>
                         )}
                       </div>

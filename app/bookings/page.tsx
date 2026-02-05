@@ -7,9 +7,8 @@ import { BookingsStats } from "@/components/bookings/bookings-stats"
 import { BookingForm } from "@/components/bookings/booking-form"
 import { Button } from "@/components/ui/button"
 import { Loader2, Plus } from "lucide-react"
-import { type Project, type Booking } from "@/src/db/schema"
-import { getProjects } from "@/src/actions/projects"
-import { getAllBookingsWithProject, getBookingsStats } from "@/src/actions/bookings"
+import { getProjects, type Project } from "@/src/actions/projects"
+import { getAllBookingsWithProject, getBookingsStats, type Booking } from "@/src/actions/bookings"
 
 export default function BookingsPage() {
   const [projects, setProjects] = useState<Project[]>([])

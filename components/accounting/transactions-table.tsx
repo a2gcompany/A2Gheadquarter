@@ -19,8 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Trash2, Search, Filter } from "lucide-react"
-import { type Transaction } from "@/src/db/schema"
-import { deleteTransaction } from "@/src/actions/transactions"
+import { deleteTransaction, type Transaction } from "@/src/actions/transactions"
 import { cn } from "@/lib/utils"
 
 interface TransactionsTableProps {

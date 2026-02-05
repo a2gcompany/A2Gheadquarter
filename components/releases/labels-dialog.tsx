@@ -29,8 +29,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Clock, Check, X, HelpCircle } from "lucide-react"
-import { type Release, type LabelContact } from "@/src/db/schema"
-import { addLabelContact, updateLabelContact, removeLabelContact } from "@/src/actions/releases"
+import { addLabelContact, updateLabelContact, removeLabelContact, type Release, type LabelContact } from "@/src/actions/releases"
 import { cn } from "@/lib/utils"
 
 interface LabelsDialogProps {
@@ -54,7 +53,7 @@ export function LabelsDialog({ open, onOpenChange, release, onSuccess }: LabelsD
 
   if (!release) return null
 
-  const labels = (release.labelsContacted || []) as LabelContact[]
+  const labels = (release.labels_contacted || []) as LabelContact[]
 
   const handleAddLabel = async () => {
     if (!newLabel.trim()) return
@@ -103,7 +102,7 @@ export function LabelsDialog({ open, onOpenChange, release, onSuccess }: LabelsD
         <DialogHeader>
           <DialogTitle>Labels Contactados</DialogTitle>
           <DialogDescription>
-            Track: <span className="font-medium">{release.trackName}</span>
+            Track: <span className="font-medium">{release.track_name}</span>
           </DialogDescription>
         </DialogHeader>
 

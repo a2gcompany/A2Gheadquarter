@@ -21,8 +21,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { AlertCircle, Music } from "lucide-react"
-import { type Project, type Release, type ReleaseStatus } from "@/src/db/schema"
-import { createRelease, updateRelease } from "@/src/actions/releases"
+import { type Project } from "@/src/actions/projects"
+import { createRelease, updateRelease, type Release } from "@/src/actions/releases"
+
+type ReleaseStatus = "draft" | "shopping" | "accepted" | "released"
 
 interface ReleaseFormProps {
   open: boolean
@@ -35,10 +37,10 @@ interface ReleaseFormProps {
 export function ReleaseForm({ open, onOpenChange, projects, release, onSuccess }: ReleaseFormProps) {
   const isEditing = !!release
 
-  const [projectId, setProjectId] = useState(release?.projectId || "")
-  const [trackName, setTrackName] = useState(release?.trackName || "")
+  const [projectId, setProjectId] = useState(release?.project_id || "")
+  const [trackName, setTrackName] = useState(release?.track_name || "")
   const [status, setStatus] = useState<ReleaseStatus>(release?.status || "draft")
-  const [releaseDate, setReleaseDate] = useState(release?.releaseDate || "")
+  const [releaseDate, setReleaseDate] = useState(release?.release_date || "")
   const [notes, setNotes] = useState(release?.notes || "")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,10 +57,10 @@ export function ReleaseForm({ open, onOpenChange, projects, release, onSuccess }
     try {
       if (isEditing && release) {
         const updated = await updateRelease(release.id, {
-          projectId,
-          trackName: trackName.trim(),
+          project_id: projectId,
+          track_name: trackName.trim(),
           status,
-          releaseDate: releaseDate || null,
+          release_date: releaseDate || null,
           notes: notes || null,
         })
         if (!updated) {
@@ -67,11 +69,12 @@ export function ReleaseForm({ open, onOpenChange, projects, release, onSuccess }
         }
       } else {
         const created = await createRelease({
-          projectId,
-          trackName: trackName.trim(),
+          project_id: projectId,
+          track_name: trackName.trim(),
           status,
-          releaseDate: releaseDate || null,
+          release_date: releaseDate || null,
           notes: notes || null,
+          labels_contacted: [],
         })
         if (!created) {
           setError("Error al crear el release")
@@ -104,10 +107,10 @@ export function ReleaseForm({ open, onOpenChange, projects, release, onSuccess }
   // Update form when release changes (for editing)
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen && release) {
-      setProjectId(release.projectId)
-      setTrackName(release.trackName)
+      setProjectId(release.project_id)
+      setTrackName(release.track_name)
       setStatus(release.status)
-      setReleaseDate(release.releaseDate || "")
+      setReleaseDate(release.release_date || "")
       setNotes(release.notes || "")
     } else if (!isOpen) {
       resetForm()

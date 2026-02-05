@@ -21,8 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Upload, FileSpreadsheet, AlertCircle, Check } from "lucide-react"
-import { createManyTransactions } from "@/src/actions/transactions"
-import { type NewTransaction, type TransactionType } from "@/src/db/schema"
+import { createManyTransactions, type NewTransaction } from "@/src/actions/transactions"
+
+type TransactionType = "income" | "expense"
 import { cn } from "@/lib/utils"
 
 interface CSVRow {
@@ -113,13 +114,13 @@ export function CSVImport({ projectId, projectName, onSuccess }: CSVImportProps)
 
     try {
       const transactions: NewTransaction[] = csvData.map((row) => ({
-        projectId,
+        project_id: projectId,
         date: row.date,
         description: row.description,
         amount: row.amount.replace(/[^0-9.-]/g, ""),
         type: (row.type === "income" || row.type === "ingreso" ? "income" : "expense") as TransactionType,
         category: row.category || null,
-        sourceFile: fileName,
+        source_file: fileName,
       }))
 
       const count = await createManyTransactions(transactions)
