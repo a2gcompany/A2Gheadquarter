@@ -3,22 +3,27 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useState } from "react"
 import {
   LayoutDashboard,
   Receipt,
   Music,
   CalendarDays,
-  FileText,
+  Users,
   X,
   Building2,
+  ChevronDown,
+  Mic2,
+  Code2,
+  UserCircle,
 } from "lucide-react"
 
 interface NavItem {
   name: string
   href: string
   icon: React.ReactNode
-  active?: boolean
   comingSoon?: boolean
+  children?: NavItem[]
 }
 
 const navItems: NavItem[] = [
@@ -33,20 +38,58 @@ const navItems: NavItem[] = [
     icon: <Receipt className="h-5 w-5" />,
   },
   {
-    name: "Releases",
-    href: "/releases",
-    icon: <Music className="h-5 w-5" />,
+    name: "A2G Talents",
+    href: "/talents",
+    icon: <Mic2 className="h-5 w-5" />,
+    children: [
+      {
+        name: "Dashboard",
+        href: "/talents",
+        icon: <LayoutDashboard className="h-4 w-4" />,
+      },
+      {
+        name: "Artistas",
+        href: "/talents/artists",
+        icon: <UserCircle className="h-4 w-4" />,
+      },
+      {
+        name: "Releases",
+        href: "/talents/releases",
+        icon: <Music className="h-4 w-4" />,
+      },
+      {
+        name: "Bookings",
+        href: "/talents/bookings",
+        icon: <CalendarDays className="h-4 w-4" />,
+      },
+      {
+        name: "Contabilidad",
+        href: "/talents/accounting",
+        icon: <Receipt className="h-4 w-4" />,
+      },
+    ],
   },
   {
-    name: "Bookings",
-    href: "/bookings",
-    icon: <CalendarDays className="h-5 w-5" />,
+    name: "Audesign",
+    href: "/audesign",
+    icon: <Code2 className="h-5 w-5" />,
+    children: [
+      {
+        name: "Dashboard",
+        href: "/audesign",
+        icon: <LayoutDashboard className="h-4 w-4" />,
+      },
+      {
+        name: "Contabilidad",
+        href: "/audesign/accounting",
+        icon: <Receipt className="h-4 w-4" />,
+      },
+    ],
   },
   {
-    name: "Reports",
-    href: "/reports",
-    icon: <FileText className="h-5 w-5" />,
-    comingSoon: true,
+    name: "Empleados",
+    href: "/employees",
+    icon: <Users className="h-5 w-5" />,
   },
 ]
 
@@ -57,6 +100,87 @@ interface AppSidebarProps {
 
 export function AppSidebar({ open = true, onClose }: AppSidebarProps) {
   const pathname = usePathname()
+  const [expandedSections, setExpandedSections] = useState<string[]>(["A2G Talents", "Audesign"])
+
+  const toggleSection = (name: string) => {
+    setExpandedSections(prev =>
+      prev.includes(name)
+        ? prev.filter(n => n !== name)
+        : [...prev, name]
+    )
+  }
+
+  const isActive = (href: string, hasChildren?: boolean) => {
+    if (href === "/") return pathname === "/"
+    if (hasChildren) return pathname.startsWith(href)
+    return pathname === href
+  }
+
+  const renderNavItem = (item: NavItem, isChild = false) => {
+    const hasChildren = item.children && item.children.length > 0
+    const isExpanded = expandedSections.includes(item.name)
+    const active = isActive(item.href, hasChildren)
+
+    if (hasChildren) {
+      return (
+        <div key={item.name}>
+          <button
+            onClick={() => toggleSection(item.name)}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+              active
+                ? "bg-sidebar-accent text-sidebar-foreground"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            )}
+          >
+            {item.icon}
+            <span className="flex-1 text-left">{item.name}</span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform",
+                isExpanded ? "rotate-180" : ""
+              )}
+            />
+          </button>
+          {isExpanded && (
+            <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-3">
+              {item.children!.map(child => renderNavItem(child, true))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <Link
+        key={item.name}
+        href={item.comingSoon ? "#" : item.href}
+        onClick={(e) => {
+          if (item.comingSoon) e.preventDefault()
+          if (onClose && window.innerWidth < 1024) onClose()
+        }}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors group",
+          isChild ? "py-1.5" : "py-2.5",
+          active && !item.comingSoon
+            ? isChild
+              ? "bg-primary/10 text-primary font-medium"
+              : "bg-primary text-primary-foreground"
+            : item.comingSoon
+              ? "text-sidebar-foreground/40 cursor-not-allowed"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        )}
+      >
+        {item.icon}
+        <span className="flex-1">{item.name}</span>
+        {item.comingSoon && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-sidebar-accent text-sidebar-foreground/50">
+            Soon
+          </span>
+        )}
+      </Link>
+    )
+  }
 
   return (
     <>
@@ -82,7 +206,7 @@ export function AppSidebar({ open = true, onClose }: AppSidebarProps) {
             </div>
             <div>
               <span className="font-bold text-sidebar-foreground block">A2G</span>
-              <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Command Center</span>
+              <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Headquarters</span>
             </div>
           </Link>
           <button
@@ -96,42 +220,14 @@ export function AppSidebar({ open = true, onClose }: AppSidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
           <div className="space-y-1">
-            {navItems.map((item) => {
-              const isActive = item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href)
-
-              return (
-                <Link
-                  key={item.name}
-                  href={item.comingSoon ? "#" : item.href}
-                  onClick={(e) => item.comingSoon && e.preventDefault()}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors group",
-                    isActive && !item.comingSoon
-                      ? "bg-primary text-primary-foreground"
-                      : item.comingSoon
-                        ? "text-sidebar-foreground/40 cursor-not-allowed"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  )}
-                >
-                  {item.icon}
-                  <span className="flex-1">{item.name}</span>
-                  {item.comingSoon && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sidebar-accent text-sidebar-foreground/50">
-                      Soon
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
+            {navItems.map(item => renderNavItem(item))}
           </div>
         </nav>
 
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border">
           <p className="text-[10px] text-sidebar-foreground/40 text-center uppercase tracking-wider">
-            A2G Headquarters v2.0
+            A2G Headquarters v3.0
           </p>
         </div>
       </aside>

@@ -12,10 +12,15 @@ export type Transaction = {
   type: "income" | "expense"
   category: string | null
   source_file: string | null
+  payment_source_id: string | null
+  business_unit_id: string | null
   created_at: string
 }
 
-export type NewTransaction = Omit<Transaction, "id" | "created_at">
+export type NewTransaction = Omit<Transaction, "id" | "created_at" | "payment_source_id" | "business_unit_id"> & {
+  payment_source_id?: string | null
+  business_unit_id?: string | null
+}
 
 export async function getTransactionsByProject(projectId: string): Promise<Transaction[]> {
   try {

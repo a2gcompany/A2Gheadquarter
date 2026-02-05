@@ -8,292 +8,453 @@ import Link from "next/link"
 import {
   Building2,
   Receipt,
-  Music,
-  CalendarDays,
-  FileText,
+  Users,
   ArrowRight,
   TrendingUp,
-  TrendingDown,
   Wallet,
-  Disc,
-  Clock,
+  CalendarDays,
+  Music,
+  Code2,
+  Mic2,
+  DollarSign,
+  Loader2,
 } from "lucide-react"
-import { getProjects, type Project } from "@/src/actions/projects"
+import { getProjects } from "@/src/actions/projects"
 import { getAllProjectsPL } from "@/src/actions/transactions"
 import { getReleasesStats } from "@/src/actions/releases"
 import { getBookingsStats, getUpcomingBookings, type Booking } from "@/src/actions/bookings"
+import { getActiveEmployees, type EmployeeWithUnit } from "@/src/actions/employees"
+import { getLatestAudesignKPI, type AudesignKPI } from "@/src/actions/audesign-kpis"
 import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [totals, setTotals] = useState({ income: 0, expense: 0, balance: 0 })
-  const [releasesStats, setReleasesStats] = useState({ total: 0, draft: 0, shopping: 0, accepted: 0, released: 0 })
-  const [bookingsStats, setBookingsStats] = useState({
-    total: 0,
-    negotiating: 0,
-    confirmed: 0,
-    contracted: 0,
-    completed: 0,
-    cancelled: 0,
-    totalRevenue: 0,
-  })
-  const [upcomingBookings, setUpcomingBookings] = useState<(Booking & { projectName: string })[]>([])
   const [loading, setLoading] = useState(true)
+  const [totals, setTotals] = useState({ income: 0, expense: 0, balance: 0 })
+  const [employees, setEmployees] = useState<EmployeeWithUnit[]>([])
+  const [upcomingBookings, setUpcomingBookings] = useState<(Booking & { projectName: string })[]>([])
+  const [audesignKPI, setAudesignKPI] = useState<AudesignKPI | null>(null)
+  const [talentsStats, setTalentsStats] = useState({
+    artists: 0,
+    releases: 0,
+    bookings: 0,
+    balance: 0,
+  })
 
   useEffect(() => {
     async function loadData() {
-      const [projectsData, plData, relStats, bookStats, upcoming] = await Promise.all([
-        getProjects(),
-        getAllProjectsPL(),
-        getReleasesStats(),
-        getBookingsStats(),
-        getUpcomingBookings(3),
-      ])
-      setProjects(projectsData)
-      setReleasesStats(relStats)
-      setBookingsStats(bookStats)
-      setUpcomingBookings(upcoming)
+      try {
+        const [
+          projectsData,
+          plData,
+          relStats,
+          bookStats,
+          upcoming,
+          employeesData,
+          kpi,
+        ] = await Promise.all([
+          getProjects(),
+          getAllProjectsPL(),
+          getReleasesStats(),
+          getBookingsStats(),
+          getUpcomingBookings(5),
+          getActiveEmployees(),
+          getLatestAudesignKPI(),
+        ])
 
-      const calculatedTotals = plData.reduce(
-        (acc, p) => ({
-          income: acc.income + p.income,
-          expense: acc.expense + p.expense,
-          balance: acc.balance + p.balance,
-        }),
-        { income: 0, expense: 0, balance: 0 }
-      )
-      setTotals(calculatedTotals)
-      setLoading(false)
+        // Filter artists
+        const artists = projectsData.filter((p) => p.type === "artist")
+        const artistIds = artists.map((a) => a.id)
+
+        // Calculate totals from P&L data
+        const calculatedTotals = plData.reduce(
+          (acc, p) => ({
+            income: acc.income + p.income,
+            expense: acc.expense + p.expense,
+            balance: acc.balance + p.balance,
+          }),
+          { income: 0, expense: 0, balance: 0 }
+        )
+        setTotals(calculatedTotals)
+
+        // Calculate talents stats
+        const talentsBalance = plData
+          .filter((p) => artistIds.includes(p.id))
+          .reduce((sum, p) => sum + p.balance, 0)
+
+        setTalentsStats({
+          artists: artists.length,
+          releases: relStats.total,
+          bookings: bookStats.total,
+          balance: talentsBalance,
+        })
+
+        setUpcomingBookings(upcoming)
+        setEmployees(employeesData)
+        setAudesignKPI(kpi)
+      } catch (error) {
+        console.error("Error loading dashboard:", error)
+      } finally {
+        setLoading(false)
+      }
     }
     loadData()
   }, [])
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString("es-ES", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     })
   }
 
-  const modules = [
-    {
-      name: "Contabilidad",
-      description: "Gestiona ingresos, gastos y P&L por proyecto",
-      icon: <Receipt className="h-6 w-6" />,
-      href: "/accounting",
-      available: true,
-    },
-    {
-      name: "Releases",
-      description: "Gestiona lanzamientos musicales y contactos con sellos",
-      icon: <Music className="h-6 w-6" />,
-      href: "/releases",
-      available: true,
-    },
-    {
-      name: "Bookings",
-      description: "Gestiona shows, venues y fees de artistas",
-      icon: <CalendarDays className="h-6 w-6" />,
-      href: "/bookings",
-      available: true,
-    },
-    {
-      name: "Reports",
-      description: "Reportes mensuales del equipo por departamento",
-      icon: <FileText className="h-6 w-6" />,
-      href: "/reports",
-      available: false,
-    },
-  ]
+  const employeesByUnit = employees.reduce((acc, emp) => {
+    const unit = emp.business_unit_slug || "unassigned"
+    acc[unit] = (acc[unit] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
 
-  const artists = projects.filter((p) => p.type === "artist")
-  const verticals = projects.filter((p) => p.type === "vertical")
+  const totalMonthlyCost = employees.reduce((sum, e) => sum + (Number(e.monthly_cost) || 0), 0)
+
+  if (loading) {
+    return (
+      <AppLayout title="A2G Headquarters">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    )
+  }
 
   return (
-    <AppLayout title="Dashboard">
+    <AppLayout title="A2G Headquarters">
       <div className="space-y-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-card border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Proyectos
-              </CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{projects.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {artists.length} artistas, {verticals.length} verticales
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Balance Total
-              </CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={cn(
-                "text-2xl font-bold",
-                totals.balance >= 0 ? "text-emerald-500" : "text-rose-500"
-              )}>
-                {loading ? "..." : `${totals.balance >= 0 ? "+" : ""}${formatCurrency(totals.balance)} €`}
+        {/* Main Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Wallet className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Balance Total</p>
+                  <p className={cn(
+                    "text-2xl font-bold",
+                    totals.balance >= 0 ? "text-emerald-500" : "text-red-500"
+                  )}>
+                    {formatCurrency(totals.balance)}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                +{formatCurrency(totals.income)} / -{formatCurrency(totals.expense)}
-              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Releases
-              </CardTitle>
-              <Disc className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{releasesStats.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {releasesStats.shopping} buscando label, {releasesStats.released} lanzados
-              </p>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-500/10 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Ingresos</p>
+                  <p className="text-2xl font-bold text-emerald-500">
+                    {formatCurrency(totals.income)}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Bookings
-              </CardTitle>
-              <CalendarDays className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{bookingsStats.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {bookingsStats.confirmed + bookingsStats.contracted} confirmados, {formatCurrency(bookingsStats.totalRevenue)} € revenue
-              </p>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-red-500/10 rounded-lg">
+                  <Receipt className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Gastos</p>
+                  <p className="text-2xl font-bold text-red-500">
+                    {formatCurrency(totals.expense)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-500/10 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Empleados</p>
+                  <p className="text-2xl font-bold">{employees.length}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(totalMonthlyCost)}/mes
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Upcoming Bookings */}
-        {upcomingBookings.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Proximos Shows</h2>
-              <Link href="/bookings">
-                <Button variant="ghost" size="sm" className="gap-1">
-                  Ver todos
-                  <ArrowRight className="h-4 w-4" />
+        {/* Business Units */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Business Units</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* A2G Talents */}
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-purple-500/10 to-purple-500/5 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/20 rounded-lg">
+                      <Mic2 className="h-5 w-5 text-purple-500" />
+                    </div>
+                    <CardTitle>A2G Talents</CardTitle>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/talents">
+                      Ver mas <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Artistas</p>
+                    <p className="text-xl font-bold">{talentsStats.artists}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Bookings</p>
+                    <p className="text-xl font-bold">{talentsStats.bookings}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Releases</p>
+                    <p className="text-xl font-bold">{talentsStats.releases}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Empleados</p>
+                    <p className="text-xl font-bold">{employeesByUnit["talents"] || 0}</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Balance</span>
+                    <span className={cn(
+                      "font-semibold",
+                      talentsStats.balance >= 0 ? "text-emerald-500" : "text-red-500"
+                    )}>
+                      {formatCurrency(talentsStats.balance)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Audesign */}
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-500/10 to-blue-500/5 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <Code2 className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <CardTitle>Audesign</CardTitle>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/audesign">
+                      Ver mas <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {audesignKPI ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">MRR</p>
+                        <p className="text-xl font-bold">{formatCurrency(Number(audesignKPI.mrr))}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Usuarios</p>
+                        <p className="text-xl font-bold">{audesignKPI.active_users}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Conversion</p>
+                        <p className="text-xl font-bold">{audesignKPI.conversion_rate}%</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Empleados</p>
+                        <p className="text-xl font-bold">{employeesByUnit["audesign"] || 0}</p>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Revenue {audesignKPI.period}</span>
+                        <span className="font-semibold text-emerald-500">
+                          {formatCurrency((Number(audesignKPI.stripe_revenue) || 0) + (Number(audesignKPI.paypal_revenue) || 0))}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Ejecuta la migracion SQL para ver KPIs
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Two Column Layout */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Upcoming Shows */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-blue-500" />
+                  Proximos Shows
+                </CardTitle>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/talents/bookings">Ver todos</Link>
                 </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {upcomingBookings.map((booking) => (
-                <Card key={booking.id} className="bg-card border-border/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
+              </div>
+            </CardHeader>
+            <CardContent>
+              {upcomingBookings.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No hay shows programados
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingBookings.map((booking) => (
+                    <div key={booking.id} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div>
-                        <p className="font-medium">{booking.projectName}</p>
-                        <p className="text-sm text-muted-foreground">{booking.venue}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {booking.city}, {booking.country}
+                        <p className="font-medium text-sm">{booking.projectName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {booking.venue} - {booking.city}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-mono">{booking.show_date}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {booking.show_date ? new Date(booking.show_date).toLocaleDateString() : "TBD"}
+                        </p>
                         {booking.fee && (
-                          <p className="text-xs text-emerald-500 mt-1">
-                            {parseFloat(booking.fee).toLocaleString()} {booking.fee_currency}
+                          <p className="text-xs text-emerald-500">
+                            {Number(booking.fee).toLocaleString()} {booking.fee_currency}
                           </p>
                         )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Modules */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Modulos</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {modules.map((module) => (
-              <Card
-                key={module.name}
-                className={cn(
-                  "bg-card border-border/50 transition-colors",
-                  module.available && "hover:border-primary/50 cursor-pointer"
-                )}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className={cn(
-                      "p-2 rounded-lg",
-                      module.available ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                    )}>
-                      {module.icon}
+          {/* Employees */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Equipo
+                </CardTitle>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/employees">Ver todos</Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {employees.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No hay empleados. Ejecuta la migracion SQL.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {employees.slice(0, 5).map((employee) => (
+                    <div key={employee.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <div>
+                        <p className="font-medium text-sm">{employee.name}</p>
+                        <p className="text-xs text-muted-foreground">{employee.role}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">
+                          {employee.business_unit_name || "-"}
+                        </p>
+                        {employee.monthly_cost && (
+                          <p className="text-xs">
+                            {employee.currency} {Number(employee.monthly_cost).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    {!module.available && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                        Proximamente
-                      </span>
-                    )}
-                  </div>
-                  <CardTitle className="text-base mt-3">{module.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {module.description}
-                  </p>
-                  {module.available ? (
-                    <Link href={module.href}>
-                      <Button className="w-full gap-2" size="sm">
-                        Acceder
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Button className="w-full" size="sm" variant="outline" disabled>
-                      No disponible
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Projects List */}
-        {projects.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Proyectos Recientes</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {projects.slice(0, 6).map((project) => (
-                <Link key={project.id} href="/accounting">
-                  <Card className="bg-card border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2">
-                        {project.type === "artist" ? (
-                          <Music className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="font-medium text-sm truncate">{project.name}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+        {/* Quick Links */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Acceso Rapido</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/accounting">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg">
+                      <Receipt className="h-5 w-5 text-emerald-500" />
+                    </div>
+                    <span className="font-medium">Contabilidad</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/talents/releases">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <Music className="h-5 w-5 text-purple-500" />
+                    </div>
+                    <span className="font-medium">Releases</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/talents/bookings">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <CalendarDays className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <span className="font-medium">Bookings</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/employees">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="font-medium">Empleados</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
-        )}
+        </div>
       </div>
     </AppLayout>
   )
