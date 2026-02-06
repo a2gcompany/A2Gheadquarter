@@ -16,6 +16,7 @@ import {
   Mic2,
   Code2,
   UserCircle,
+  CloudDownload,
 } from "lucide-react"
 
 interface NavItem {
@@ -90,6 +91,11 @@ const navItems: NavItem[] = [
     name: "Empleados",
     href: "/employees",
     icon: <Users className="h-5 w-5" />,
+  },
+  {
+    name: "ABOSS Import",
+    href: "/aboss",
+    icon: <CloudDownload className="h-5 w-5" />,
   },
 ]
 
