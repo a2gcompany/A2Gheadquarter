@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS employees (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- Insert sample employees (2 Talents, 3 Audesign)
+-- Insert real team
 DO $$
 DECLARE
   talents_id UUID;
@@ -47,17 +47,18 @@ BEGIN
   SELECT id INTO audesign_id FROM business_units WHERE slug = 'audesign' LIMIT 1;
 
   IF talents_id IS NOT NULL THEN
-    INSERT INTO employees (business_unit_id, name, role, monthly_cost, currency, status) VALUES
-      (talents_id, 'Employee 1', 'Artist Manager', 2500, 'EUR', 'active'),
-      (talents_id, 'Employee 2', 'Booking Agent', 2200, 'EUR', 'active')
+    INSERT INTO employees (business_unit_id, name, role, status) VALUES
+      (talents_id, 'Mario', 'A&R', 'active'),
+      (talents_id, 'Ivan', 'Agent', 'active')
     ON CONFLICT DO NOTHING;
   END IF;
 
   IF audesign_id IS NOT NULL THEN
-    INSERT INTO employees (business_unit_id, name, role, monthly_cost, currency, status) VALUES
-      (audesign_id, 'Dev 1', 'Full Stack Developer', 3500, 'EUR', 'active'),
-      (audesign_id, 'Dev 2', 'Frontend Developer', 3000, 'EUR', 'active'),
-      (audesign_id, 'Dev 3', 'Backend Developer', 3200, 'EUR', 'active')
+    INSERT INTO employees (business_unit_id, name, role, status, notes) VALUES
+      (audesign_id, 'Alvaro', 'Product & Partner', 'active', NULL),
+      (audesign_id, 'Cristian', 'Marketing', 'active', 'Also handles marketing for Roger Sanchez (A2G Talents)'),
+      (audesign_id, 'Marius', 'Meta Ads', 'active', NULL),
+      (audesign_id, 'Salva', 'Google Ads', 'active', NULL)
     ON CONFLICT DO NOTHING;
   END IF;
 END $$;
@@ -76,7 +77,7 @@ CREATE TABLE IF NOT EXISTS payment_sources (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- Insert payment sources
+-- Insert real payment sources
 DO $$
 DECLARE
   holding_id UUID;
@@ -87,15 +88,18 @@ BEGIN
 
   IF holding_id IS NOT NULL THEN
     INSERT INTO payment_sources (business_unit_id, name, type, currency) VALUES
-      (holding_id, 'BBVA A2G Company', 'bank', 'EUR'),
-      (holding_id, 'Wise A2G', 'bank', 'EUR')
+      (holding_id, 'Wio Business', 'bank', 'AED'),
+      (holding_id, 'Wio Personal', 'bank', 'AED'),
+      (holding_id, 'Amex Personal', 'bank', 'EUR'),
+      (holding_id, 'Wise Personal', 'wise', 'EUR')
     ON CONFLICT DO NOTHING;
   END IF;
 
   IF audesign_id IS NOT NULL THEN
     INSERT INTO payment_sources (business_unit_id, name, type, currency) VALUES
-      (audesign_id, 'Stripe Audesign', 'stripe', 'EUR'),
-      (audesign_id, 'PayPal Audesign', 'paypal', 'EUR')
+      (audesign_id, 'Shopify', 'stripe', 'EUR'),
+      (audesign_id, 'Stripe', 'stripe', 'EUR'),
+      (audesign_id, 'PayPal', 'paypal', 'EUR')
     ON CONFLICT DO NOTHING;
   END IF;
 END $$;
@@ -119,15 +123,8 @@ CREATE TABLE IF NOT EXISTS audesign_kpis (
   UNIQUE(period)
 );
 
--- Insert sample KPIs for last 6 months
-INSERT INTO audesign_kpis (period, mrr, active_users, new_users, churned_users, stripe_revenue, paypal_revenue, conversion_rate, arpu) VALUES
-  ('2024-09', 1850, 98, 15, 5, 1650, 200, 2.1, 18.88),
-  ('2024-10', 1980, 105, 12, 5, 1780, 200, 2.2, 18.86),
-  ('2024-11', 2100, 112, 10, 3, 1900, 200, 2.3, 18.75),
-  ('2024-12', 2200, 118, 9, 3, 2000, 200, 2.2, 18.64),
-  ('2025-01', 2340, 127, 12, 3, 2140, 200, 2.3, 18.43),
-  ('2025-02', 2450, 134, 10, 3, 2250, 200, 2.4, 18.28)
-ON CONFLICT (period) DO NOTHING;
+-- KPIs should be populated from real data sources (Shopify, Stripe, PayPal, Meta, Google)
+-- No sample data inserted - use the Audesign dashboard to add real KPIs
 
 -- ============================================
 -- 5. MODIFY EXISTING TABLES

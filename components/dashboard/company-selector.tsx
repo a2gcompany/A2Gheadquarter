@@ -11,12 +11,9 @@ import {
 
 const companies = [
   { id: "all", name: "TODAS LAS EMPRESAS", slug: "all" },
-  { id: "a2g", name: "A2G", slug: "a2g" },
-  { id: "roger-sanchez", name: "Roger Sanchez", slug: "roger-sanchez" },
+  { id: "holding", name: "A2G FZCO", slug: "holding" },
+  { id: "talents", name: "A2G Talents", slug: "talents" },
   { id: "audesign", name: "Audesign", slug: "audesign" },
-  { id: "s-core", name: "S-CORE", slug: "s-core" },
-  { id: "twinyards", name: "TWINYARDS", slug: "twinyards" },
-  { id: "babel", name: "BÂBEL", slug: "babel" },
 ]
 
 interface CompanySelectorProps {

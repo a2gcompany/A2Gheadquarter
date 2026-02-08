@@ -482,10 +482,8 @@ CREATE POLICY "Users can view their own chat history" ON ai_chat_history
   FOR SELECT USING (auth.uid() = user_id);
 
 -- Insert seed data for companies
+-- NOTE: This migration is legacy. Current system uses business_units table (see migration-v2.sql)
 INSERT INTO companies (name, slug, type, description) VALUES
-  ('A2G', 'a2g', 'holding', 'Holding company'),
-  ('Roger Sanchez', 'roger-sanchez', 'talent', 'Talent management and booking'),
-  ('Audesign', 'audesign', 'agency', 'Digital marketing agency'),
-  ('S-CORE', 's-core', 'studio', 'Production studio'),
-  ('TWINYARDS', 'twinyards', 'studio', 'Creative studio'),
-  ('BÂBEL', 'babel', 'agency', 'Creative agency');
+  ('A2G FZCO', 'holding', 'holding', 'A2G FZCO - Holding Principal (Dubai)'),
+  ('A2G Talents', 'talents', 'talent', 'Artist Management'),
+  ('Audesign', 'audesign', 'agency', 'Software para productores musicales');

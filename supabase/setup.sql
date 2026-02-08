@@ -67,19 +67,18 @@ CREATE INDEX IF NOT EXISTS idx_releases_project_id ON releases(project_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_project_id ON bookings(project_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_show_date ON bookings(show_date);
 
--- Insert sample data: Artists
+-- Insert artists
 INSERT INTO projects (name, type) VALUES
   ('Prophecy', 'artist'),
   ('BABEL', 'artist'),
-  ('Roger Sanchez', 'artist')
+  ('Roger Sanchez', 'artist'),
+  ('AIRE', 'artist')
 ON CONFLICT DO NOTHING;
 
--- Insert sample data: Verticals
+-- Insert verticals (core business units only)
 INSERT INTO projects (name, type) VALUES
   ('A2G Company', 'vertical'),
-  ('A2G Talents', 'vertical'),
-  ('S-CORE', 'vertical'),
-  ('PAIDDADS', 'vertical')
+  ('A2G Talents', 'vertical')
 ON CONFLICT DO NOTHING;
 
 -- Insert sample releases for Prophecy
