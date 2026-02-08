@@ -1,4 +1,10 @@
 {
   "buildCommand": "next build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/sync-sheets",
+      "schedule": "0 */6 * * *"
+    }
+  ]
 }

@@ -18,6 +18,9 @@ import {
   Mic2,
   DollarSign,
   Loader2,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react"
 import { getProjects } from "@/src/actions/projects"
 import { getAllProjectsPL } from "@/src/actions/transactions"
@@ -33,6 +36,8 @@ export default function DashboardPage() {
   const [employees, setEmployees] = useState<EmployeeWithUnit[]>([])
   const [upcomingBookings, setUpcomingBookings] = useState<(Booking & { projectName: string })[]>([])
   const [audesignKPI, setAudesignKPI] = useState<AudesignKPI | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<{ success: boolean; summary: string } | null>(null)
   const [talentsStats, setTalentsStats] = useState({
     artists: 0,
     releases: 0,
@@ -100,6 +105,33 @@ export default function DashboardPage() {
     loadData()
   }, [])
 
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch("/api/sync-sheets?manual=true")
+      const data = await res.json()
+      setSyncResult({ success: data.success, summary: data.summary || data.error })
+      // Reload dashboard data after sync
+      if (data.success) {
+        const [relStats, bookStats] = await Promise.all([
+          getReleasesStats(),
+          getBookingsStats(),
+        ])
+        setTalentsStats(prev => ({
+          ...prev,
+          releases: relStats.total,
+          bookings: bookStats.total,
+        }))
+      }
+    } catch {
+      setSyncResult({ success: false, summary: "Error de conexion" })
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncResult(null), 8000)
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString("es-ES", {
       minimumFractionDigits: 0,
@@ -128,6 +160,32 @@ export default function DashboardPage() {
   return (
     <AppLayout title="A2G Headquarters">
       <div className="space-y-8">
+        {/* Sync Bar */}
+        <div className="flex items-center justify-between">
+          <div />
+          <div className="flex items-center gap-3">
+            {syncResult && (
+              <span className={cn(
+                "text-sm flex items-center gap-1.5",
+                syncResult.success ? "text-emerald-500" : "text-red-500"
+              )}>
+                {syncResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                {syncResult.summary}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSync}
+              disabled={syncing}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
+              {syncing ? "Sincronizando..." : "Sync Google Sheets"}
+            </Button>
+          </div>
+        </div>
+
         {/* Main Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
