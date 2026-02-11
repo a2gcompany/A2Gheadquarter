@@ -2,7 +2,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
-import { toUSD } from "@/src/lib/currency"
+import { toUSD } from "@/lib/utils/currency"
 import type { Booking, NewBooking } from "@/src/types/database"
 
 export type { Booking, NewBooking }
