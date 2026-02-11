@@ -2,25 +2,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import type { Transaction, NewTransaction } from "@/src/types/database"
 
-export type Transaction = {
-  id: string
-  project_id: string
-  date: string
-  description: string
-  amount: string
-  type: "income" | "expense"
-  category: string | null
-  source_file: string | null
-  payment_source_id: string | null
-  business_unit_id: string | null
-  created_at: string
-}
-
-export type NewTransaction = Omit<Transaction, "id" | "created_at" | "payment_source_id" | "business_unit_id"> & {
-  payment_source_id?: string | null
-  business_unit_id?: string | null
-}
+export type { Transaction, NewTransaction }
 
 export async function getTransactionsByProject(projectId: string): Promise<Transaction[]> {
   try {
@@ -84,6 +68,53 @@ export async function createManyTransactions(data: NewTransaction[]): Promise<nu
   } catch (error) {
     console.error("Error creating transactions:", error)
     return 0
+  }
+}
+
+export async function createManyTransactionsDedup(
+  data: NewTransaction[],
+  projectId: string
+): Promise<{ imported: number; skipped: number }> {
+  try {
+    if (data.length === 0) return { imported: 0, skipped: 0 }
+
+    // Get existing transactions for dedup
+    const { data: existing } = await supabaseAdmin
+      .from("transactions")
+      .select("date, amount, description")
+      .eq("project_id", projectId)
+
+    const existingKeys = new Set(
+      (existing || []).map(
+        (e: any) =>
+          `${e.date}|${e.amount}|${String(e.description || "").substring(0, 50)}`
+      )
+    )
+
+    let skipped = 0
+    const toInsert = data.filter((d) => {
+      const key = `${d.date}|${d.amount}|${String(d.description || "").substring(0, 50)}`
+      if (existingKeys.has(key)) {
+        skipped++
+        return false
+      }
+      return true
+    })
+
+    if (toInsert.length === 0) return { imported: 0, skipped }
+
+    const { data: result, error } = await supabaseAdmin
+      .from("transactions")
+      .insert(toInsert)
+      .select()
+
+    if (error) throw error
+    revalidatePath("/accounting")
+    revalidatePath("/integrations")
+    return { imported: result?.length || 0, skipped }
+  } catch (error) {
+    console.error("Error creating transactions with dedup:", error)
+    return { imported: 0, skipped: 0 }
   }
 }
 
@@ -211,5 +242,91 @@ export async function getAllProjectsPL() {
   } catch (error) {
     console.error("Error fetching all projects P&L:", error)
     return []
+  }
+}
+
+// Get monthly breakdown for a business unit
+export async function getBusinessUnitMonthlyData(slug: string) {
+  try {
+    const { data: unit } = await supabaseAdmin
+      .from("business_units")
+      .select("id")
+      .eq("slug", slug)
+      .single()
+
+    if (!unit) return []
+
+    const { data: projects } = await supabaseAdmin
+      .from("projects")
+      .select("id")
+      .eq("business_unit_id", unit.id)
+
+    const projectIds = projects?.map(p => p.id) || []
+    if (projectIds.length === 0) return []
+
+    const { data, error } = await supabaseAdmin
+      .from("transactions")
+      .select("date, type, amount")
+      .in("project_id", projectIds)
+      .order("date")
+
+    if (error) throw error
+
+    const monthlyMap: Record<string, { month: string; income: number; expense: number }> = {}
+
+    for (const row of data || []) {
+      const month = row.date.substring(0, 7)
+      if (!monthlyMap[month]) {
+        monthlyMap[month] = { month, income: 0, expense: 0 }
+      }
+      const amount = parseFloat(row.amount || "0")
+      if (row.type === "income") {
+        monthlyMap[month].income += amount
+      } else if (row.type === "expense") {
+        monthlyMap[month].expense += amount
+      }
+    }
+
+    return Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month))
+  } catch (error) {
+    console.error("Error fetching business unit monthly data:", error)
+    return []
+  }
+}
+
+// Get current month stats across all projects
+export async function getMonthlyStats() {
+  try {
+    const now = new Date()
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
+
+    const { data, error } = await supabaseAdmin
+      .from("transactions")
+      .select("type, amount")
+      .gte("date", monthStart)
+
+    if (error) throw error
+
+    let income = 0
+    let expense = 0
+
+    for (const row of data || []) {
+      const amount = parseFloat(row.amount || "0")
+      if (row.type === "income") {
+        income += amount
+      } else if (row.type === "expense") {
+        expense += amount
+      }
+    }
+
+    return {
+      income,
+      expense,
+      balance: income - expense,
+      month: monthStart.substring(0, 7),
+    }
+  } catch (error) {
+    console.error("Error fetching monthly stats:", error)
+    return { income: 0, expense: 0, balance: 0, month: "" }
   }
 }
