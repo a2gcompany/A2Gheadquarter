@@ -249,7 +249,7 @@ export default function DashboardPage() {
                   <p className="text-sm text-muted-foreground">Empleados</p>
                   <p className="text-2xl font-bold">{employees.length}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatCurrency(totalMonthlyCost)}/mes
+                    {totalMonthlyCost > 0 ? `${formatCurrency(totalMonthlyCost)}/mes` : "Sin costes asignados"}
                   </p>
                 </div>
               </div>

@@ -16,7 +16,7 @@ import {
 import Link from "next/link"
 import { getProjects, Project } from "@/src/actions/projects"
 import { getAllReleases } from "@/src/actions/releases"
-import { getUpcomingBookings } from "@/src/actions/bookings"
+import { getUpcomingBookings, getAllBookingsWithProject } from "@/src/actions/bookings"
 
 type Release = {
   id: string
@@ -34,6 +34,7 @@ type Booking = {
   show_date: string | null
   fee: number | null
   fee_currency: string
+  status: string
 }
 
 export default function TalentsDashboard() {
@@ -41,19 +42,22 @@ export default function TalentsDashboard() {
   const [artists, setArtists] = useState<Project[]>([])
   const [releases, setReleases] = useState<Release[]>([])
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([])
+  const [allBookings, setAllBookings] = useState<Booking[]>([])
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [projectsData, releasesData, bookingsData] = await Promise.all([
+        const [projectsData, releasesData, bookingsData, allBookingsData] = await Promise.all([
           getProjects(),
           getAllReleases(),
           getUpcomingBookings(5),
+          getAllBookingsWithProject(),
         ])
 
         setArtists(projectsData.filter(p => p.type === "artist"))
         setReleases(releasesData)
         setUpcomingBookings(bookingsData)
+        setAllBookings(allBookingsData)
       } catch (error) {
         console.error("Error loading data:", error)
       } finally {
@@ -64,7 +68,9 @@ export default function TalentsDashboard() {
   }, [])
 
   const shoppingReleases = releases.filter(r => r.status === "shopping")
-  const totalBookingRevenue = upcomingBookings.reduce((sum, b) => sum + (Number(b.fee) || 0), 0)
+  const totalBookingRevenue = allBookings
+    .filter(b => b.status === "completed" || b.status === "contracted")
+    .reduce((sum, b) => sum + (Number(b.fee) || 0), 0)
 
   const getArtistName = (projectId: string) => {
     return artists.find(a => a.id === projectId)?.name || "Unknown"
@@ -72,7 +78,7 @@ export default function TalentsDashboard() {
 
   const getArtistStats = (artistId: string) => {
     const artistReleases = releases.filter(r => r.project_id === artistId)
-    const artistBookings = upcomingBookings.filter(b => b.project_id === artistId)
+    const artistBookings = allBookings.filter(b => b.project_id === artistId)
     return {
       releases: artistReleases.length,
       bookings: artistBookings.length,

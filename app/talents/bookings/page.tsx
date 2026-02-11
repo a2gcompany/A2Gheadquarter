@@ -51,7 +51,7 @@ export default function TalentsBookingsPage() {
         completed: artistBookings.filter(b => b.status === "completed").length,
         cancelled: artistBookings.filter(b => b.status === "cancelled").length,
         totalRevenue: artistBookings
-          .filter(b => b.status === "completed")
+          .filter(b => b.status === "completed" || b.status === "contracted")
           .reduce((sum, b) => sum + (Number(b.fee) || 0), 0),
       }
       setStats(artistStats)
