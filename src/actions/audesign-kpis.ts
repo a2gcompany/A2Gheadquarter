@@ -2,21 +2,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import type { AudesignKPI } from "@/src/types/database"
 
-export type AudesignKPI = {
-  id: string
-  period: string
-  mrr: number | null
-  active_users: number
-  new_users: number
-  churned_users: number
-  stripe_revenue: number | null
-  paypal_revenue: number | null
-  conversion_rate: number | null
-  arpu: number | null
-  notes: string | null
-  created_at: string
-}
+export type { AudesignKPI }
 
 export async function getAudesignKPIs(limit?: number): Promise<AudesignKPI[]> {
   let query = supabaseAdmin

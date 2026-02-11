@@ -2,15 +2,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import type { Project, NewProject } from "@/src/types/database"
 
-export type Project = {
-  id: string
-  name: string
-  type: "artist" | "vertical"
-  created_at: string
-}
-
-export type NewProject = Omit<Project, "id" | "created_at">
+export type { Project, NewProject }
 
 export async function getProjects(): Promise<Project[]> {
   try {

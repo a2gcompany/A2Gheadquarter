@@ -2,15 +2,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import type { BusinessUnit } from "@/src/types/database"
 
-export type BusinessUnit = {
-  id: string
-  slug: string
-  name: string
-  type: "holding" | "management" | "software" | "marketing" | "media"
-  description: string | null
-  created_at: string
-}
+export type { BusinessUnit }
 
 export async function getBusinessUnits(): Promise<BusinessUnit[]> {
   const { data, error } = await supabaseAdmin

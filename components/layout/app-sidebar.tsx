@@ -16,6 +16,11 @@ import {
   Mic2,
   Code2,
   UserCircle,
+  Plug,
+  Landmark,
+  CreditCard,
+  Wallet,
+  ShoppingCart,
 } from "lucide-react"
 
 interface NavItem {
@@ -83,6 +88,38 @@ const navItems: NavItem[] = [
         name: "Contabilidad",
         href: "/audesign/accounting",
         icon: <Receipt className="h-4 w-4" />,
+      },
+    ],
+  },
+  {
+    name: "Integraciones",
+    href: "/integrations",
+    icon: <Plug className="h-5 w-5" />,
+    children: [
+      {
+        name: "Dashboard",
+        href: "/integrations",
+        icon: <LayoutDashboard className="h-4 w-4" />,
+      },
+      {
+        name: "Bank Import",
+        href: "/integrations/bank-import",
+        icon: <Landmark className="h-4 w-4" />,
+      },
+      {
+        name: "Stripe",
+        href: "/integrations/stripe",
+        icon: <CreditCard className="h-4 w-4" />,
+      },
+      {
+        name: "PayPal",
+        href: "/integrations/paypal",
+        icon: <Wallet className="h-4 w-4" />,
+      },
+      {
+        name: "Shopify",
+        href: "/integrations/shopify",
+        icon: <ShoppingCart className="h-4 w-4" />,
       },
     ],
   },

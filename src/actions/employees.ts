@@ -2,25 +2,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import type { Employee, EmployeeWithUnit } from "@/src/types/database"
 
-export type Employee = {
-  id: string
-  business_unit_id: string | null
-  name: string
-  role: string
-  email: string | null
-  monthly_cost: number | null
-  currency: string
-  start_date: string | null
-  status: "active" | "inactive" | "contractor"
-  notes: string | null
-  created_at: string
-}
-
-export type EmployeeWithUnit = Employee & {
-  business_unit_name: string | null
-  business_unit_slug: string | null
-}
+export type { Employee, EmployeeWithUnit }
 
 export async function getEmployees(): Promise<EmployeeWithUnit[]> {
   const { data, error } = await supabaseAdmin

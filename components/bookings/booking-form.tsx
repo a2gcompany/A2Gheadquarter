@@ -88,6 +88,11 @@ export function BookingForm({ open, onOpenChange, projects, booking, onSuccess }
           status,
           show_date: showDate || null,
           notes: notes || null,
+          contract_id: null,
+          region: null,
+          fee_usd: null,
+          artist_name: null,
+          event_name: null,
         })
         if (!created) {
           setError("Error al crear el booking")

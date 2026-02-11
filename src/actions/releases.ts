@@ -2,26 +2,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import type { Release, NewRelease, LabelContact } from "@/src/types/database"
 
-export type LabelContact = {
-  label: string
-  status: "pending" | "waiting" | "rejected" | "accepted"
-  date: string
-  notes?: string
-}
-
-export type Release = {
-  id: string
-  project_id: string
-  track_name: string
-  labels_contacted: LabelContact[] | null
-  status: "draft" | "shopping" | "accepted" | "released"
-  release_date: string | null
-  notes: string | null
-  created_at: string
-}
-
-export type NewRelease = Omit<Release, "id" | "created_at">
+export type { Release, NewRelease, LabelContact }
 
 export async function getReleasesByProject(projectId: string): Promise<Release[]> {
   try {

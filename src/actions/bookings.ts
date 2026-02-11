@@ -2,22 +2,10 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { toUSD } from "@/src/lib/currency"
+import type { Booking, NewBooking } from "@/src/types/database"
 
-export type Booking = {
-  id: string
-  project_id: string
-  venue: string
-  city: string
-  country: string
-  fee: string | null
-  fee_currency: string | null
-  status: "negotiating" | "confirmed" | "contracted" | "completed" | "cancelled"
-  show_date: string | null
-  notes: string | null
-  created_at: string
-}
-
-export type NewBooking = Omit<Booking, "id" | "created_at">
+export type { Booking, NewBooking }
 
 export async function getBookingsByProject(projectId: string): Promise<Booking[]> {
   try {
@@ -80,6 +68,67 @@ export async function createBooking(data: NewBooking): Promise<Booking | null> {
   } catch (error) {
     console.error("Error creating booking:", error)
     return null
+  }
+}
+
+export async function createManyBookings(
+  data: NewBooking[],
+  dedup = true
+): Promise<{ imported: number; skipped: number }> {
+  try {
+    if (data.length === 0) return { imported: 0, skipped: 0 }
+
+    let toInsert = data
+    let skipped = 0
+
+    if (dedup) {
+      // Get existing bookings for dedup by contract_id + show_date + project_id
+      const withContract = data.filter((d) => d.contract_id && d.show_date)
+      if (withContract.length > 0) {
+        const { data: existing } = await supabaseAdmin
+          .from("bookings")
+          .select("contract_id, show_date, project_id")
+
+        const existingKeys = new Set(
+          (existing || []).map(
+            (e: any) => `${e.contract_id}|${e.show_date}|${e.project_id}`
+          )
+        )
+
+        toInsert = data.filter((d) => {
+          if (d.contract_id && d.show_date) {
+            const key = `${d.contract_id}|${d.show_date}|${d.project_id}`
+            if (existingKeys.has(key)) {
+              skipped++
+              return false
+            }
+          }
+          return true
+        })
+      }
+    }
+
+    if (toInsert.length === 0) return { imported: 0, skipped }
+
+    // Calculate fee_usd for each booking
+    const enriched = toInsert.map((b) => ({
+      ...b,
+      fee_usd: b.fee
+        ? String(toUSD(parseFloat(b.fee), b.fee_currency || "USD"))
+        : null,
+    }))
+
+    const { data: result, error } = await supabaseAdmin
+      .from("bookings")
+      .insert(enriched)
+      .select()
+
+    if (error) throw error
+    revalidatePath("/bookings")
+    return { imported: result?.length || 0, skipped }
+  } catch (error) {
+    console.error("Error creating bookings:", error)
+    return { imported: 0, skipped: 0 }
   }
 }
 
@@ -186,12 +235,15 @@ export async function getBookingsStats() {
       cancelled: allBookings.filter((b) => b.status === "cancelled").length,
     }
 
-    // Calculate total revenue from completed/contracted bookings
+    // Calculate total revenue from completed/contracted bookings (converted to USD)
     const revenueBookings = allBookings.filter(
       (b) => b.status === "completed" || b.status === "contracted"
     )
     const totalRevenue = revenueBookings.reduce(
-      (acc, b) => acc + parseFloat(b.fee || "0"),
+      (acc, b) => {
+        const fee = parseFloat(b.fee || "0")
+        return acc + toUSD(fee, b.fee_currency || "USD")
+      },
       0
     )
 

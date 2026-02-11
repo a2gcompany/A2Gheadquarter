@@ -2,17 +2,9 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import type { PaymentSource } from "@/src/types/database"
 
-export type PaymentSource = {
-  id: string
-  business_unit_id: string | null
-  name: string
-  type: "bank" | "stripe" | "paypal" | "wise" | "cash" | "crypto"
-  account_identifier: string | null
-  currency: string
-  is_active: boolean
-  created_at: string
-}
+export type { PaymentSource }
 
 export async function getPaymentSources(): Promise<PaymentSource[]> {
   const { data, error } = await supabaseAdmin

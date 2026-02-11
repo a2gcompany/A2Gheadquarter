@@ -17,6 +17,7 @@ import { Loader2, TrendingUp, TrendingDown, Wallet, CreditCard, Building2 } from
 import { getProjects, type Project } from "@/src/actions/projects"
 import { getPaymentSources, type PaymentSource } from "@/src/actions/payment-sources"
 import { getBusinessUnitBySlug } from "@/src/actions/business-units"
+import Link from "next/link"
 import {
   getAllTransactions,
 } from "@/src/actions/transactions"
@@ -208,16 +209,33 @@ export default function AudesignAccountingPage() {
               </Card>
             </div>
 
-            {/* Note about data structure */}
-            <Card className="bg-muted/50 border-dashed">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Nota:</strong> Para ver transacciones de Audesign, primero ejecuta la migracion SQL
-                  que crea las fuentes de pago (Stripe, PayPal). Luego podras importar extractos CSV
-                  asignados a cada fuente.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Quick links to integrations */}
+            {transactions.length === 0 && (
+              <Card className="bg-muted/50 border-dashed">
+                <CardContent className="pt-6 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Sin transacciones.</strong> Conecta tus fuentes de datos para importar automaticamente:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/integrations/stripe">
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <CreditCard className="h-3 w-3" /> Stripe
+                      </Button>
+                    </Link>
+                    <Link href="/integrations/paypal">
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <CreditCard className="h-3 w-3" /> PayPal
+                      </Button>
+                    </Link>
+                    <Link href="/integrations/bank-import">
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <Building2 className="h-3 w-3" /> Importar CSV
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Transactions Table */}
             <Card>
