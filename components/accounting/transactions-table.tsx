@@ -18,9 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { Trash2, Search, Filter } from "lucide-react"
 import { deleteTransaction, type Transaction } from "@/src/actions/transactions"
 import { cn } from "@/lib/utils"
+
+function getSourceBadge(sourceFile: string | null) {
+  const sf = sourceFile || ""
+  if (sf.startsWith("stripe:")) return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-500">Stripe</Badge>
+  if (sf.startsWith("shopify:")) return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-500">Shopify</Badge>
+  if (sf.startsWith("paypal:")) return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-500">PayPal</Badge>
+  return <Badge variant="outline" className="text-[10px] px-1.5 py-0">Other</Badge>
+}
 
 interface TransactionsTableProps {
   transactions: Transaction[]
@@ -128,6 +137,7 @@ export function TransactionsTable({ transactions, onRefresh }: TransactionsTable
               <TableRow>
                 <TableHead className="w-[100px]">Fecha</TableHead>
                 <TableHead>Descripcion</TableHead>
+                <TableHead className="w-[80px]">Fuente</TableHead>
                 <TableHead className="w-[100px]">Categoria</TableHead>
                 <TableHead className="w-[120px] text-right">Importe</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -141,6 +151,9 @@ export function TransactionsTable({ transactions, onRefresh }: TransactionsTable
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate">
                     {transaction.description}
+                  </TableCell>
+                  <TableCell>
+                    {getSourceBadge(transaction.source_file)}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {transaction.category || "-"}
