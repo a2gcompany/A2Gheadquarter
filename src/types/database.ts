@@ -24,13 +24,17 @@ export type Transaction = {
   type: TransactionType
   category: string | null
   source_file: string | null
+  external_id: string | null
+  import_id: string | null
   payment_source_id: string | null
   business_unit_id: string | null
   created_at: string
 }
-export type NewTransaction = Omit<Transaction, "id" | "created_at" | "payment_source_id" | "business_unit_id"> & {
+export type NewTransaction = Omit<Transaction, "id" | "created_at" | "payment_source_id" | "business_unit_id" | "import_id" | "external_id"> & {
   payment_source_id?: string | null
   business_unit_id?: string | null
+  import_id?: string | null
+  external_id?: string | null
 }
 
 // --- Bookings ---
@@ -139,7 +143,7 @@ export type PaymentSource = {
 }
 
 // --- Integrations ---
-export type IntegrationType = "bank" | "stripe" | "paypal" | "shopify"
+export type IntegrationType = "bank" | "stripe" | "paypal" | "shopify" | "google_sheets"
 export type Integration = {
   id: string
   business_unit_id: string | null
@@ -148,6 +152,50 @@ export type Integration = {
   config: Record<string, unknown>
   is_active: boolean
   last_synced_at: string | null
+  created_at: string
+}
+
+// --- Import History ---
+export type ImportStatus = "running" | "completed" | "failed" | "partial"
+export type ImportTrigger = "manual" | "cron" | "api"
+export type ImportSourceType = "stripe" | "paypal" | "shopify" | "bank_csv" | "google_sheets" | "csv_manual" | "excel_bookings"
+
+export type ImportHistory = {
+  id: string
+  integration_id: string | null
+  source_type: ImportSourceType
+  source_name: string
+  triggered_by: ImportTrigger
+  status: ImportStatus
+  rows_imported: number
+  rows_skipped: number
+  rows_errored: number
+  error_message: string | null
+  metadata: Record<string, unknown>
+  started_at: string
+  completed_at: string | null
+  created_at: string
+}
+export type NewImportHistory = {
+  integration_id?: string | null
+  source_type: ImportSourceType
+  source_name: string
+  triggered_by: ImportTrigger
+  metadata?: Record<string, unknown>
+}
+
+// --- Reconciliation ---
+export type ReconciliationStatus = "pending" | "confirmed" | "rejected"
+export type ReconciliationMatch = {
+  id: string
+  transaction_a_id: string
+  transaction_b_id: string
+  match_type: "auto" | "manual"
+  match_confidence: number | null
+  status: ReconciliationStatus
+  matched_on: Record<string, unknown>
+  confirmed_by: string | null
+  confirmed_at: string | null
   created_at: string
 }
 

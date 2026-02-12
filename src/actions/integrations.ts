@@ -133,6 +133,31 @@ export async function updateLastSynced(id: string): Promise<boolean> {
   }
 }
 
+export async function getGoogleSheetsConfig(): Promise<{
+  releasesSheetId: string | null
+  pitchingsSheetId: string | null
+  integrationId: string | null
+}> {
+  try {
+    const { data } = await supabaseAdmin
+      .from("integrations")
+      .select("id, config")
+      .eq("type", "google_sheets")
+      .eq("is_active", true)
+      .limit(1)
+
+    const cfg = data?.[0]
+    return {
+      releasesSheetId: (cfg?.config?.releasesSheetId as string) || null,
+      pitchingsSheetId: (cfg?.config?.pitchingsSheetId as string) || null,
+      integrationId: cfg?.id || null,
+    }
+  } catch (error) {
+    console.error("Error fetching Google Sheets config:", error)
+    return { releasesSheetId: null, pitchingsSheetId: null, integrationId: null }
+  }
+}
+
 export async function getIntegrationStats() {
   try {
     const integrations = await getIntegrations()

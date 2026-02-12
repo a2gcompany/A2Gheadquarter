@@ -19,14 +19,21 @@ import { getPaymentSources, type PaymentSource } from "@/src/actions/payment-sou
 import { getBusinessUnitBySlug } from "@/src/actions/business-units"
 import Link from "next/link"
 import {
-  getAllTransactions,
+  getTransactionsByProject,
 } from "@/src/actions/transactions"
+import { getIntegrations } from "@/src/actions/integrations"
+
+// AUDESIGN project ID
+const AUDESIGN_PROJECT_ID = "e232f7c0-3a86-4086-9567-8114d046c3ec"
+
+type SourceFilter = "all" | "stripe" | "shopify" | "paypal" | "other"
 
 export default function AudesignAccountingPage() {
   const [loading, setLoading] = useState(true)
   const [paymentSources, setPaymentSources] = useState<PaymentSource[]>([])
-  const [selectedSource, setSelectedSource] = useState<string>("all")
+  const [selectedSource, setSelectedSource] = useState<SourceFilter>("all")
   const [transactions, setTransactions] = useState<any[]>([])
+  const [allTransactions, setAllTransactions] = useState<any[]>([])
   const [audesignUnitId, setAudesignUnitId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
@@ -46,29 +53,33 @@ export default function AudesignAccountingPage() {
       )
       setPaymentSources(audesignSources)
 
-      // Get all transactions - in a real app, we'd filter by payment_source_id or business_unit_id
-      // For now, we'll show all and let the user understand the structure
-      const allTransactions = await getAllTransactions()
-
-      // In production, filter by audesign business unit
-      // For demo, show all transactions or filter by source if selected
-      if (selectedSource !== "all") {
-        setTransactions(allTransactions.filter(t => t.payment_source_id === selectedSource))
-      } else {
-        // Show transactions that would belong to Audesign
-        // This is demo data - in production you'd filter by business_unit_id
-        setTransactions(allTransactions.slice(0, 20))
-      }
+      // Get transactions for the AUDESIGN project
+      const projectTransactions = await getTransactionsByProject(AUDESIGN_PROJECT_ID)
+      setAllTransactions(projectTransactions)
     } catch (error) {
       console.error("Error loading data:", error)
     } finally {
       setLoading(false)
     }
-  }, [selectedSource])
+  }, [])
 
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Filter transactions by source
+  useEffect(() => {
+    if (selectedSource === "all") {
+      setTransactions(allTransactions)
+    } else {
+      setTransactions(
+        allTransactions.filter((t) => {
+          const src = t.source_file || t.external_id || ""
+          return src.startsWith(`${selectedSource}:`)
+        })
+      )
+    }
+  }, [selectedSource, allTransactions])
 
   // Calculate P&L from transactions
   const pl = transactions.reduce(
@@ -109,20 +120,27 @@ export default function AudesignAccountingPage() {
               Finanzas de Audesign (Stripe, PayPal, Banco)
             </p>
           </div>
-          <Select value={selectedSource} onValueChange={setSelectedSource}>
+          <Select value={selectedSource} onValueChange={(v) => setSelectedSource(v as SourceFilter)}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Todas las fuentes" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las fuentes</SelectItem>
-              {paymentSources.map((source) => (
-                <SelectItem key={source.id} value={source.id}>
-                  <div className="flex items-center gap-2">
-                    {getSourceIcon(source.type)}
-                    {source.name}
-                  </div>
-                </SelectItem>
-              ))}
+              <SelectItem value="stripe">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" /> Stripe
+                </div>
+              </SelectItem>
+              <SelectItem value="shopify">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4" /> Shopify
+                </div>
+              </SelectItem>
+              <SelectItem value="paypal">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" /> PayPal
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -133,30 +151,63 @@ export default function AudesignAccountingPage() {
           </div>
         ) : (
           <>
-            {/* Payment Sources Overview */}
-            {paymentSources.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {paymentSources.map((source) => (
+            {/* Source Overview */}
+            {allTransactions.length > 0 && (() => {
+              const counts = allTransactions.reduce((acc, t) => {
+                const src = t.source_file || t.external_id || ""
+                if (src.startsWith("stripe:")) acc.stripe++
+                else if (src.startsWith("shopify:")) acc.shopify++
+                else if (src.startsWith("paypal:")) acc.paypal++
+                else acc.other++
+                return acc
+              }, { stripe: 0, shopify: 0, paypal: 0, other: 0 })
+
+              const sources = [
+                { key: "stripe" as SourceFilter, label: "Stripe", count: counts.stripe, icon: <CreditCard className="h-4 w-4" /> },
+                { key: "shopify" as SourceFilter, label: "Shopify", count: counts.shopify, icon: <Wallet className="h-4 w-4" /> },
+                { key: "paypal" as SourceFilter, label: "PayPal", count: counts.paypal, icon: <CreditCard className="h-4 w-4" /> },
+              ].filter(s => s.count > 0)
+
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Card
-                    key={source.id}
-                    className={`cursor-pointer transition-colors ${selectedSource === source.id ? "border-primary" : ""}`}
-                    onClick={() => setSelectedSource(source.id)}
+                    className={`cursor-pointer transition-colors ${selectedSource === "all" ? "border-primary" : ""}`}
+                    onClick={() => setSelectedSource("all")}
                   >
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-muted rounded-lg">
-                          {getSourceIcon(source.type)}
+                          <Wallet className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">{source.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{source.type}</p>
+                          <p className="text-sm font-medium">Todas</p>
+                          <p className="text-xs text-muted-foreground">{allTransactions.length} transacciones</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            )}
+                  {sources.map((source) => (
+                    <Card
+                      key={source.key}
+                      className={`cursor-pointer transition-colors ${selectedSource === source.key ? "border-primary" : ""}`}
+                      onClick={() => setSelectedSource(source.key)}
+                    >
+                      <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-muted rounded-lg">
+                            {source.icon}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{source.label}</p>
+                            <p className="text-xs text-muted-foreground">{source.count} transacciones</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* P&L Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -241,10 +292,10 @@ export default function AudesignAccountingPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Transacciones
-                  {selectedSource !== "all" && paymentSources.find(s => s.id === selectedSource) && (
+                  Transacciones ({transactions.length})
+                  {selectedSource !== "all" && (
                     <span className="font-normal text-muted-foreground ml-2">
-                      - {paymentSources.find(s => s.id === selectedSource)?.name}
+                      - {selectedSource.charAt(0).toUpperCase() + selectedSource.slice(1)}
                     </span>
                   )}
                 </CardTitle>

@@ -78,28 +78,62 @@ export async function createManyTransactionsDedup(
   try {
     if (data.length === 0) return { imported: 0, skipped: 0 }
 
-    // Get existing transactions for dedup
-    const { data: existing } = await supabaseAdmin
-      .from("transactions")
-      .select("date, amount, description")
-      .eq("project_id", projectId)
-
-    const existingKeys = new Set(
-      (existing || []).map(
-        (e: any) =>
-          `${e.date}|${e.amount}|${String(e.description || "").substring(0, 50)}`
-      )
-    )
-
     let skipped = 0
-    const toInsert = data.filter((d) => {
-      const key = `${d.date}|${d.amount}|${String(d.description || "").substring(0, 50)}`
-      if (existingKeys.has(key)) {
-        skipped++
-        return false
+    const toInsert: NewTransaction[] = []
+
+    // Strategy 1: Dedup by external_id (Stripe, PayPal, Shopify - uses unique index)
+    const withExternalId = data.filter(d => d.external_id)
+    const withoutExternalId = data.filter(d => !d.external_id)
+
+    if (withExternalId.length > 0) {
+      const externalIds = withExternalId.map(d => d.external_id!)
+
+      // Query in chunks of 200 to avoid query size limits
+      const existingExternalIds = new Set<string>()
+      for (let i = 0; i < externalIds.length; i += 200) {
+        const chunk = externalIds.slice(i, i + 200)
+        const { data: existing } = await supabaseAdmin
+          .from("transactions")
+          .select("external_id")
+          .in("external_id", chunk)
+
+        for (const e of existing || []) {
+          if (e.external_id) existingExternalIds.add(e.external_id)
+        }
       }
-      return true
-    })
+
+      for (const tx of withExternalId) {
+        if (existingExternalIds.has(tx.external_id!)) {
+          skipped++
+        } else {
+          toInsert.push(tx)
+        }
+      }
+    }
+
+    // Strategy 2: Fallback dedup for CSV/manual imports (date+amount+description+source_file)
+    if (withoutExternalId.length > 0) {
+      const { data: existing } = await supabaseAdmin
+        .from("transactions")
+        .select("date, amount, description, source_file")
+        .eq("project_id", projectId)
+
+      const existingKeys = new Set(
+        (existing || []).map(
+          (e: any) =>
+            `${e.date}|${e.amount}|${String(e.description || "").substring(0, 50)}|${e.source_file || ""}`
+        )
+      )
+
+      for (const tx of withoutExternalId) {
+        const key = `${tx.date}|${tx.amount}|${String(tx.description || "").substring(0, 50)}|${tx.source_file || ""}`
+        if (existingKeys.has(key)) {
+          skipped++
+        } else {
+          toInsert.push(tx)
+        }
+      }
+    }
 
     if (toInsert.length === 0) return { imported: 0, skipped }
 
@@ -111,6 +145,7 @@ export async function createManyTransactionsDedup(
     if (error) throw error
     revalidatePath("/accounting")
     revalidatePath("/integrations")
+    revalidatePath("/ingestion")
     return { imported: result?.length || 0, skipped }
   } catch (error) {
     console.error("Error creating transactions with dedup:", error)

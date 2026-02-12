@@ -5,6 +5,10 @@
     {
       "path": "/api/sync-sheets",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/sync-integrations",
+      "schedule": "0 6 * * *"
     }
   ]
 }

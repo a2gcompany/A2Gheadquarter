@@ -2,7 +2,8 @@
 
 import { createManyTransactionsDedup } from "./transactions"
 import { getIntegration, updateLastSynced } from "./integrations"
-import type { NewTransaction } from "@/src/types/database"
+import { createImportRecord, completeImportRecord } from "./import-history"
+import type { NewTransaction, ImportTrigger } from "@/src/types/database"
 
 const API_VERSION = "2024-01"
 
@@ -48,16 +49,28 @@ function getNextPageUrl(linkHeader: string | null): string | null {
 
 export async function syncShopify(
   integrationId: string,
-  projectId: string
+  projectId: string,
+  triggeredBy: ImportTrigger = "manual"
 ): Promise<{ synced: number; skipped: number; error?: string }> {
+  const importRecord = await createImportRecord({
+    integration_id: integrationId,
+    source_type: "shopify",
+    source_name: "Shopify Sync",
+    triggered_by: triggeredBy,
+  })
+
   try {
     const integration = await getIntegration(integrationId)
-    if (!integration) return { synced: 0, skipped: 0, error: "Integration not found" }
+    if (!integration) {
+      if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0, error_message: "Integration not found" })
+      return { synced: 0, skipped: 0, error: "Integration not found" }
+    }
 
     const storeUrl = integration.config.storeUrl as string
     const accessToken = integration.config.accessToken as string
 
     if (!storeUrl || !accessToken) {
+      if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0, error_message: "Shopify credentials not configured" })
       return { synced: 0, skipped: 0, error: "Shopify credentials not configured" }
     }
 
@@ -67,7 +80,7 @@ export async function syncShopify(
     // Determine start date
     const createdAtMin = integration.last_synced_at
       ? new Date(integration.last_synced_at).toISOString()
-      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
 
     const allTransactions: NewTransaction[] = []
 
@@ -102,6 +115,8 @@ export async function syncShopify(
           type: "income",
           category: "revenue",
           source_file: `shopify:${order.id}`,
+          external_id: `shopify:${order.id}`,
+          import_id: importRecord?.id || null,
         })
 
         // Expense from refunds
@@ -122,6 +137,8 @@ export async function syncShopify(
               type: "expense",
               category: "refund",
               source_file: `shopify:refund:${refund.id}`,
+              external_id: `shopify:refund:${refund.id}`,
+              import_id: importRecord?.id || null,
             })
           }
         }
@@ -132,15 +149,18 @@ export async function syncShopify(
 
     if (allTransactions.length === 0) {
       await updateLastSynced(integrationId)
+      if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0 })
       return { synced: 0, skipped: 0 }
     }
 
     const result = await createManyTransactionsDedup(allTransactions, projectId)
     await updateLastSynced(integrationId)
 
+    if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: result.imported, rows_skipped: result.skipped })
     return { synced: result.imported, skipped: result.skipped }
   } catch (error: any) {
     console.error("Error syncing Shopify:", error)
+    if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0, error_message: error.message || "Sync failed" })
     return { synced: 0, skipped: 0, error: error.message || "Sync failed" }
   }
 }

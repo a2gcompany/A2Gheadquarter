@@ -2,7 +2,8 @@
 
 import { createManyTransactionsDedup } from "./transactions"
 import { getIntegration, updateLastSynced } from "./integrations"
-import type { NewTransaction } from "@/src/types/database"
+import { createImportRecord, completeImportRecord } from "./import-history"
+import type { NewTransaction, ImportTrigger } from "@/src/types/database"
 
 function getBaseUrl(sandbox: boolean) {
   return sandbox
@@ -62,17 +63,29 @@ function resolveCategory(eventCode: string): string {
 
 export async function syncPaypal(
   integrationId: string,
-  projectId: string
+  projectId: string,
+  triggeredBy: ImportTrigger = "manual"
 ): Promise<{ synced: number; skipped: number; error?: string }> {
+  const importRecord = await createImportRecord({
+    integration_id: integrationId,
+    source_type: "paypal",
+    source_name: "PayPal Sync",
+    triggered_by: triggeredBy,
+  })
+
   try {
     const integration = await getIntegration(integrationId)
-    if (!integration) return { synced: 0, skipped: 0, error: "Integration not found" }
+    if (!integration) {
+      if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0, error_message: "Integration not found" })
+      return { synced: 0, skipped: 0, error: "Integration not found" }
+    }
 
     const clientId = integration.config.clientId as string
     const secret = integration.config.secret as string
     const sandbox = integration.config.sandbox as boolean
 
     if (!clientId || !secret) {
+      if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0, error_message: "PayPal credentials not configured" })
       return { synced: 0, skipped: 0, error: "PayPal credentials not configured" }
     }
 
@@ -82,7 +95,7 @@ export async function syncPaypal(
     // Determine date range
     const startDate = integration.last_synced_at
       ? new Date(integration.last_synced_at).toISOString()
-      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
     const endDate = new Date().toISOString()
 
     // Fetch transactions
@@ -121,6 +134,7 @@ export async function syncPaypal(
 
         const amount = parseFloat(info.transaction_amount?.value || "0")
         const eventCode = info.transaction_event_code || ""
+        const txId = info.transaction_id
 
         allTransactions.push({
           project_id: projectId,
@@ -135,7 +149,9 @@ export async function syncPaypal(
           amount: String(Math.abs(amount)),
           type: resolveType(eventCode),
           category: resolveCategory(eventCode),
-          source_file: `paypal:${info.transaction_id}`,
+          source_file: `paypal:${txId}`,
+          external_id: `paypal:${txId}`,
+          import_id: importRecord?.id || null,
         })
       }
 
@@ -144,15 +160,18 @@ export async function syncPaypal(
 
     if (allTransactions.length === 0) {
       await updateLastSynced(integrationId)
+      if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0 })
       return { synced: 0, skipped: 0 }
     }
 
     const result = await createManyTransactionsDedup(allTransactions, projectId)
     await updateLastSynced(integrationId)
 
+    if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: result.imported, rows_skipped: result.skipped })
     return { synced: result.imported, skipped: result.skipped }
   } catch (error: any) {
     console.error("Error syncing PayPal:", error)
+    if (importRecord) await completeImportRecord(importRecord.id, { rows_imported: 0, rows_skipped: 0, error_message: error.message || "Sync failed" })
     return { synced: 0, skipped: 0, error: error.message || "Sync failed" }
   }
 }
