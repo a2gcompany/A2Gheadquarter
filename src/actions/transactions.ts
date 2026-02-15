@@ -13,6 +13,7 @@ export async function getTransactionsByProject(projectId: string): Promise<Trans
       .select("*")
       .eq("project_id", projectId)
       .order("date", { ascending: false })
+      .range(0, 49999)
 
     if (error) throw error
     return data || []
@@ -28,6 +29,7 @@ export async function getAllTransactions(): Promise<Transaction[]> {
       .from("transactions")
       .select("*")
       .order("date", { ascending: false })
+      .range(0, 49999)
 
     if (error) throw error
     return data || []
@@ -176,6 +178,7 @@ export async function getProjectPL(projectId: string) {
       .from("transactions")
       .select("type, amount")
       .eq("project_id", projectId)
+      .range(0, 49999)
 
     if (error) throw error
 
@@ -210,6 +213,7 @@ export async function getProjectMonthlyData(projectId: string) {
       .select("date, type, amount")
       .eq("project_id", projectId)
       .order("date")
+      .range(0, 49999)
 
     if (error) throw error
 
@@ -249,6 +253,7 @@ export async function getAllProjectsPL() {
     const { data: transactions, error: txError } = await supabaseAdmin
       .from("transactions")
       .select("project_id, type, amount")
+      .range(0, 49999)
 
     if (txError) throw txError
 
@@ -304,6 +309,7 @@ export async function getBusinessUnitMonthlyData(slug: string) {
       .select("date, type, amount")
       .in("project_id", projectIds)
       .order("date")
+      .range(0, 49999)
 
     if (error) throw error
 
@@ -339,6 +345,7 @@ export async function getMonthlyStats() {
       .from("transactions")
       .select("type, amount")
       .gte("date", monthStart)
+      .range(0, 49999)
 
     if (error) throw error
 
