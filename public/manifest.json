@@ -1,0 +1,26 @@
+{
+  "name": "A2G Command Center",
+  "short_name": "A2G Command",
+  "description": "Command Center for A2G Company - Business Intelligence and Analytics",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["business", "finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View Command Center Dashboard",
+      "url": "/"
+    },
+    {
+      "name": "Ingestion",
+      "short_name": "Ingestion",
+      "description": "Import, sync and reconcile data",
+      "url": "/ingestion"
+    }
+  ]
+}

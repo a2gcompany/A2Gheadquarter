@@ -1,0 +1,41 @@
+name: Database Migrations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/*.sql'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Supabase migrations
+        run: |
+          echo "📋 New migration files detected."
+          echo "⚠️  Migrations are applied manually via Supabase CLI or Dashboard."
+          echo "Run: supabase db push --linked"
+          echo ""
+          echo "Pending migrations:"
+          ls -la supabase/migrations/*.sql
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Notify success
+        if: success()
+        run: echo "✅ Migration check completed"
