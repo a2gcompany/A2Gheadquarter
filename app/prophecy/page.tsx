@@ -44,8 +44,8 @@ function formatDate(dateStr: string | null): string {
   })
 }
 
-export default async function RogerPortalPage() {
-  const project = await getProjectByName("Roger Sanchez")
+export default async function ProphecyPortalPage() {
+  const project = await getProjectByName("Prophecy")
 
   if (!project) {
     return (
@@ -80,23 +80,19 @@ export default async function RogerPortalPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold tracking-widest text-slate-500 uppercase mb-1">
               A2G Talents
             </p>
-            <h1 className="text-2xl font-bold text-white">Roger Sanchez</h1>
+            <h1 className="text-2xl font-bold text-white">Prophecy</h1>
           </div>
-          <div className="text-xs text-slate-600">
-            headquarters.a2g.company
-          </div>
+          <div className="text-xs text-slate-600">headquarters.a2g.company</div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-10">
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center gap-3 mb-2">
@@ -129,7 +125,6 @@ export default async function RogerPortalPage() {
           </div>
         </div>
 
-        {/* Upcoming Shows */}
         <section>
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
             Upcoming Shows
@@ -177,7 +172,6 @@ export default async function RogerPortalPage() {
           )}
         </section>
 
-        {/* Active Releases */}
         <section>
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
             Releases Pipeline
@@ -220,7 +214,6 @@ export default async function RogerPortalPage() {
           )}
         </section>
 
-        {/* All releases (collapsed view) */}
         {releases.filter((r) => !["shopping", "accepted"].includes(r.status)).length > 0 && (
           <section>
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
