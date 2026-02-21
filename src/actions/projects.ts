@@ -55,6 +55,22 @@ export async function createProject(data: NewProject): Promise<Project | null> {
   }
 }
 
+export async function getProjectByName(name: string): Promise<Project | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("projects")
+      .select("*")
+      .ilike("name", name)
+      .single()
+
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error("Error fetching project by name:", error)
+    return null
+  }
+}
+
 export async function deleteProject(id: string): Promise<boolean> {
   try {
     const { error } = await supabaseAdmin
