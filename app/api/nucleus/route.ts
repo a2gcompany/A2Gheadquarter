@@ -57,12 +57,6 @@ export async function POST(req: NextRequest) {
       case "trigger_sync":
         return NextResponse.json(await triggerSync(params, req))
 
-      case "sync_observability":
-        return NextResponse.json(await syncObservability(params))
-
-      case "get_observability":
-        return NextResponse.json(await getObservability())
-
       default:
         return badRequest(`Unknown action: ${action}`)
     }
@@ -322,36 +316,4 @@ async function getContractsStatsData() {
     completed: all.filter((c: any) => c.status === "completed").length,
     totalValue: all.filter((c: any) => c.status === "active" || c.status === "signing").reduce((s: number, c: any) => s + (Number(c.value) || 0), 0),
   }
-}
-
-// --- Observability ---
-
-async function syncObservability(params: any) {
-  const { timestamp, services, serviceUptime, cronStats, costs, stats } = params
-
-  const { error } = await supabaseAdmin
-    .from("nucleus_observability")
-    .insert({
-      synced_at: timestamp || new Date().toISOString(),
-      services: services || {},
-      service_uptime: serviceUptime || {},
-      cron_stats: cronStats || {},
-      costs: costs || {},
-      stats: stats || {},
-    })
-
-  if (error) throw error
-  return { success: true, synced_at: timestamp }
-}
-
-async function getObservability() {
-  const { data, error } = await supabaseAdmin
-    .from("nucleus_observability")
-    .select("*")
-    .order("synced_at", { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error && error.code !== "PGRST116") throw error
-  return { observability: data || null }
 }
