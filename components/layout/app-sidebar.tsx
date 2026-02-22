@@ -25,6 +25,10 @@ import {
   DollarSign,
   FileText,
   LogOut,
+  Megaphone,
+  Package,
+  Headphones,
+  GitBranch,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
@@ -101,6 +105,19 @@ const navItems: NavItem[] = [
         icon: <LayoutDashboard className="h-4 w-4" />,
       },
       {
+        name: "Marketing",
+        href: "/audesign/marketing",
+        icon: <Megaphone className="h-4 w-4" />,
+        children: [
+          { name: "Overview", href: "/audesign/marketing", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { name: "Meta Ads", href: "/audesign/marketing/metaads", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { name: "Google Ads", href: "/audesign/marketing/googleads", icon: <LayoutDashboard className="h-4 w-4" /> },
+        ],
+      },
+      { name: "Producto", href: "/audesign/product", icon: <Package className="h-4 w-4" />, comingSoon: true },
+      { name: "Soporte", href: "/audesign/support", icon: <Headphones className="h-4 w-4" />, comingSoon: true },
+      { name: "Desarrollo", href: "/audesign/development", icon: <GitBranch className="h-4 w-4" />, comingSoon: true },
+      {
         name: "Contabilidad",
         href: "/audesign/accounting",
         icon: <Receipt className="h-4 w-4" />,
@@ -159,7 +176,7 @@ interface AppSidebarProps {
 export function AppSidebar({ open = true, onClose }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [expandedSections, setExpandedSections] = useState<string[]>(["A2G Talents", "Audesign"])
+  const [expandedSections, setExpandedSections] = useState<string[]>(["A2G Talents", "Audesign", "Marketing"])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
