@@ -260,3 +260,44 @@ export type AudesignKPI = {
   notes: string | null
   created_at: string
 }
+
+// --- Ad Campaigns ---
+export type AdPlatform = "meta" | "google"
+export type AdCampaignStatus = "active" | "paused" | "archived"
+export type AdCampaign = {
+  id: string
+  platform: AdPlatform
+  platform_campaign_id: string
+  business_unit_id: string | null
+  name: string
+  status: AdCampaignStatus
+  product: string | null
+  campaign_type: string | null
+  daily_budget: number | null
+  currency: string
+  geo_targeting: string | null
+  created_at: string
+  updated_at: string
+}
+
+// --- Ad Daily Metrics ---
+export type AdDailyMetric = {
+  id: string
+  campaign_id: string
+  date: string
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  cpc: number
+  conversions: number
+  cpa: number
+  revenue: number
+  roas: number
+  landing_views: number
+  add_to_cart: number
+  checkouts: number
+  purchases: number
+  search_impression_share: number | null
+  created_at: string
+}
