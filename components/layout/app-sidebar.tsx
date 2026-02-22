@@ -24,7 +24,10 @@ import {
   Database,
   DollarSign,
   FileText,
+  LogOut,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase/client"
 
 interface NavItem {
   name: string
@@ -155,7 +158,14 @@ interface AppSidebarProps {
 
 export function AppSidebar({ open = true, onClose }: AppSidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [expandedSections, setExpandedSections] = useState<string[]>(["A2G Talents", "Audesign"])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
 
   const toggleSection = (name: string) => {
     setExpandedSections(prev =>
@@ -280,7 +290,14 @@ export function AppSidebar({ open = true, onClose }: AppSidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-3">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Cerrar sesion</span>
+          </button>
           <p className="text-[10px] text-sidebar-foreground/40 text-center uppercase tracking-wider">
             A2G Headquarters v3.0
           </p>
