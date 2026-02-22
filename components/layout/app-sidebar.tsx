@@ -29,6 +29,7 @@ import {
   Package,
   Headphones,
   GitBranch,
+  Activity,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
@@ -165,6 +166,11 @@ const navItems: NavItem[] = [
     name: "Empleados",
     href: "/employees",
     icon: <Users className="h-5 w-5" />,
+  },
+  {
+    name: "Observabilidad",
+    href: "/observability",
+    icon: <Activity className="h-5 w-5" />,
   },
 ]
 
