@@ -13,7 +13,6 @@ import {
   Receipt,
   Loader2,
   ArrowLeft,
-  Plus,
 } from "lucide-react"
 import Link from "next/link"
 import { getProject, Project } from "@/src/actions/projects"
@@ -21,10 +20,8 @@ import { getReleasesByProject, type Release } from "@/src/actions/releases"
 import { getBookingsByProject, type Booking } from "@/src/actions/bookings"
 import { getTransactionsByProject, getProjectPL } from "@/src/actions/transactions"
 import { ReleasesTable } from "@/components/releases/releases-table"
-import { ReleaseForm } from "@/components/releases/release-form"
 import { LabelsDialog } from "@/components/releases/labels-dialog"
 import { BookingsTable } from "@/components/bookings/bookings-table"
-import { BookingForm } from "@/components/bookings/booking-form"
 import { TransactionsTable } from "@/components/accounting/transactions-table"
 
 export default function ArtistDetailPage() {
@@ -41,14 +38,8 @@ export default function ArtistDetailPage() {
   const [pl, setPl] = useState({ income: 0, expense: 0, balance: 0 })
   const [activeTab, setActiveTab] = useState(initialTab)
 
-  // Form dialog states
-  const [releaseFormOpen, setReleaseFormOpen] = useState(false)
-  const [editingRelease, setEditingRelease] = useState<Release | null>(null)
   const [labelsDialogOpen, setLabelsDialogOpen] = useState(false)
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null)
-
-  const [bookingFormOpen, setBookingFormOpen] = useState(false)
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null)
 
   const loadData = async () => {
     try {
@@ -76,7 +67,6 @@ export default function ArtistDetailPage() {
     loadData()
   }, [artistId])
 
-  // Add projectName to releases and bookings for table display
   const releasesWithProject = releases.map(r => ({
     ...r,
     projectName: artist?.name || ""
@@ -94,31 +84,9 @@ export default function ArtistDetailPage() {
 
   const activeReleases = releases.filter(r => ["shopping", "accepted"].includes(r.status))
 
-  // Release form handlers
-  const handleCreateRelease = () => {
-    setEditingRelease(null)
-    setReleaseFormOpen(true)
-  }
-
-  const handleEditRelease = (release: Release) => {
-    setEditingRelease(release)
-    setReleaseFormOpen(true)
-  }
-
   const handleViewLabels = (release: Release) => {
     setSelectedRelease(release)
     setLabelsDialogOpen(true)
-  }
-
-  // Booking form handlers
-  const handleCreateBooking = () => {
-    setEditingBooking(null)
-    setBookingFormOpen(true)
-  }
-
-  const handleEditBooking = (booking: Booking) => {
-    setEditingBooking(booking)
-    setBookingFormOpen(true)
   }
 
   if (loading) {
@@ -147,14 +115,12 @@ export default function ArtistDetailPage() {
   return (
     <AppLayout title={artist.name}>
       <div className="space-y-6">
-        {/* Back button */}
         <Button variant="ghost" size="sm" asChild>
           <Link href="/talents/artists">
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Artistas
           </Link>
         </Button>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -163,9 +129,7 @@ export default function ArtistDetailPage() {
             <TabsTrigger value="accounting">Contabilidad</TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
-            {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
@@ -228,9 +192,7 @@ export default function ArtistDetailPage() {
               </Card>
             </div>
 
-            {/* Two columns */}
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Upcoming Shows */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Proximos Shows</CardTitle>
@@ -263,7 +225,6 @@ export default function ArtistDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Active Releases */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Releases Activos</CardTitle>
@@ -295,40 +256,22 @@ export default function ArtistDetailPage() {
             </div>
           </TabsContent>
 
-          {/* Releases Tab */}
           <TabsContent value="releases" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={handleCreateRelease}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Release
-              </Button>
-            </div>
             <ReleasesTable
               releases={releasesWithProject}
               onRefresh={loadData}
-              onEdit={handleEditRelease}
               onViewLabels={handleViewLabels}
             />
           </TabsContent>
 
-          {/* Bookings Tab */}
           <TabsContent value="bookings" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={handleCreateBooking}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Booking
-              </Button>
-            </div>
             <BookingsTable
               bookings={bookingsWithProject}
               onRefresh={loadData}
-              onEdit={handleEditBooking}
             />
           </TabsContent>
 
-          {/* Accounting Tab */}
           <TabsContent value="accounting" className="space-y-4">
-            {/* P&L Summary */}
             <div className="grid grid-cols-3 gap-4">
               <Card>
                 <CardContent className="pt-6">
@@ -364,29 +307,10 @@ export default function ArtistDetailPage() {
         </Tabs>
       </div>
 
-      {/* Release Form Dialog */}
-      <ReleaseForm
-        open={releaseFormOpen}
-        onOpenChange={setReleaseFormOpen}
-        projects={[artist]}
-        release={editingRelease}
-        onSuccess={loadData}
-      />
-
-      {/* Labels Dialog */}
       <LabelsDialog
         open={labelsDialogOpen}
         onOpenChange={setLabelsDialogOpen}
         release={selectedRelease}
-        onSuccess={loadData}
-      />
-
-      {/* Booking Form Dialog */}
-      <BookingForm
-        open={bookingFormOpen}
-        onOpenChange={setBookingFormOpen}
-        projects={[artist]}
-        booking={editingBooking}
         onSuccess={loadData}
       />
     </AppLayout>

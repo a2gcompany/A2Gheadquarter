@@ -8,7 +8,6 @@ import Link from "next/link"
 import {
   Building2,
   Receipt,
-  Users,
   ArrowRight,
   TrendingUp,
   Wallet,
@@ -26,7 +25,6 @@ import { getProjects } from "@/src/actions/projects"
 import { getAllProjectsPL } from "@/src/actions/transactions"
 import { getReleasesStats } from "@/src/actions/releases"
 import { getBookingsStats, getUpcomingBookings, type Booking } from "@/src/actions/bookings"
-import { getActiveEmployees, type EmployeeWithUnit } from "@/src/actions/employees"
 import { getLatestAudesignKPI, type AudesignKPI } from "@/src/actions/audesign-kpis"
 import { getRoyaltiesStats } from "@/src/actions/royalties"
 import { cn } from "@/lib/utils"
@@ -34,7 +32,6 @@ import { cn } from "@/lib/utils"
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [totals, setTotals] = useState({ income: 0, expense: 0, balance: 0 })
-  const [employees, setEmployees] = useState<EmployeeWithUnit[]>([])
   const [upcomingBookings, setUpcomingBookings] = useState<(Booking & { projectName: string })[]>([])
   const [audesignKPI, setAudesignKPI] = useState<AudesignKPI | null>(null)
   const [syncing, setSyncing] = useState(false)
@@ -56,7 +53,6 @@ export default function DashboardPage() {
           relStats,
           bookStats,
           upcoming,
-          employeesData,
           kpi,
           royStats,
         ] = await Promise.all([
@@ -65,7 +61,6 @@ export default function DashboardPage() {
           getReleasesStats(),
           getBookingsStats(),
           getUpcomingBookings(5),
-          getActiveEmployees(),
           getLatestAudesignKPI(),
           getRoyaltiesStats(),
         ])
@@ -99,7 +94,6 @@ export default function DashboardPage() {
         })
 
         setUpcomingBookings(upcoming)
-        setEmployees(employeesData)
         setAudesignKPI(kpi)
       } catch (error) {
         console.error("Error loading dashboard:", error)
@@ -143,14 +137,6 @@ export default function DashboardPage() {
       maximumFractionDigits: 0,
     })
   }
-
-  const employeesByUnit = employees.reduce((acc, emp) => {
-    const unit = emp.business_unit_slug || "unassigned"
-    acc[unit] = (acc[unit] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
-
-  const totalMonthlyCost = employees.reduce((sum, e) => sum + (Number(e.monthly_cost) || 0), 0)
 
   if (loading) {
     return (
@@ -247,14 +233,16 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-500" />
+                <div className="p-3 bg-yellow-500/10 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-yellow-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Empleados</p>
-                  <p className="text-2xl font-bold">{employees.length}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {totalMonthlyCost > 0 ? `${formatCurrency(totalMonthlyCost)}/mes` : "Sin costes asignados"}
+                  <p className="text-sm text-muted-foreground">Royalties Pendientes</p>
+                  <p className={cn(
+                    "text-2xl font-bold",
+                    talentsStats.pendingRoyalties > 0 ? "text-yellow-500" : "text-emerald-500"
+                  )}>
+                    ${formatCurrency(talentsStats.pendingRoyalties)}
                   </p>
                 </div>
               </div>
@@ -298,20 +286,16 @@ export default function DashboardPage() {
                     <p className="text-xl font-bold">{talentsStats.releases}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Empleados</p>
-                    <p className="text-xl font-bold">{employeesByUnit["talents"] || 0}</p>
-                  </div>
-                </div>
-                <div className="pt-4 border-t space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Balance</span>
-                    <span className={cn(
-                      "font-semibold",
+                    <p className="text-sm text-muted-foreground">Balance</p>
+                    <p className={cn(
+                      "text-xl font-bold",
                       talentsStats.balance >= 0 ? "text-emerald-500" : "text-red-500"
                     )}>
                       {formatCurrency(talentsStats.balance)}
-                    </span>
+                    </p>
                   </div>
+                </div>
+                <div className="pt-4 border-t space-y-2">
                   {talentsStats.pendingRoyalties > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -361,8 +345,8 @@ export default function DashboardPage() {
                         <p className="text-xl font-bold">{audesignKPI.conversion_rate}%</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Empleados</p>
-                        <p className="text-xl font-bold">{employeesByUnit["audesign"] || 0}</p>
+                        <p className="text-sm text-muted-foreground">ARPU</p>
+                        <p className="text-xl font-bold">{audesignKPI.arpu ? `$${audesignKPI.arpu}` : "—"}</p>
                       </div>
                     </div>
                     <div className="pt-4 border-t">
@@ -431,46 +415,30 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Employees */}
+          {/* Releases Pipeline */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  Equipo
+                  <Music className="h-5 w-5 text-purple-500" />
+                  Releases
                 </CardTitle>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/employees">Ver todos</Link>
+                  <Link href="/talents/releases">Ver todos</Link>
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              {employees.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No hay empleados. Ejecuta la migracion SQL.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {employees.slice(0, 5).map((employee) => (
-                    <div key={employee.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <div>
-                        <p className="font-medium text-sm">{employee.name}</p>
-                        <p className="text-xs text-muted-foreground">{employee.role}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">
-                          {employee.business_unit_name || "-"}
-                        </p>
-                        {employee.monthly_cost && (
-                          <p className="text-xs">
-                            {employee.currency} {Number(employee.monthly_cost).toLocaleString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 rounded-lg bg-muted/50">
+                  <p className="text-2xl font-bold">{talentsStats.releases}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
                 </div>
-              )}
+                <div className="text-center p-3 rounded-lg bg-yellow-500/10">
+                  <p className="text-2xl font-bold text-yellow-500">{talentsStats.bookings}</p>
+                  <p className="text-xs text-muted-foreground">Bookings</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -515,14 +483,14 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </Link>
-            <Link href="/employees">
+            <Link href="/talents/royalties">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Users className="h-5 w-5 text-primary" />
+                    <div className="p-2 bg-yellow-500/10 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-yellow-500" />
                     </div>
-                    <span className="font-medium">Empleados</span>
+                    <span className="font-medium">Royalties</span>
                   </div>
                 </CardContent>
               </Card>

@@ -37,7 +37,6 @@ const TYPE_CONFIG: Record<
   bank: {
     icon: <Landmark className="h-5 w-5" />,
     color: "text-blue-500",
-    actionHref: "/integrations/bank-import",
   },
   stripe: {
     icon: <CreditCard className="h-5 w-5" />,

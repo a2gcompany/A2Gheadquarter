@@ -17,18 +17,13 @@ import {
   Code2,
   UserCircle,
   Plug,
-  Landmark,
   CreditCard,
   Wallet,
   ShoppingCart,
-  Database,
   DollarSign,
   FileText,
   LogOut,
   Megaphone,
-  Package,
-  Headphones,
-  GitBranch,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
@@ -114,20 +109,12 @@ const navItems: NavItem[] = [
           { name: "Google Ads", href: "/audesign/marketing/googleads", icon: <LayoutDashboard className="h-4 w-4" /> },
         ],
       },
-      { name: "Producto", href: "/audesign/product", icon: <Package className="h-4 w-4" />, comingSoon: true },
-      { name: "Soporte", href: "/audesign/support", icon: <Headphones className="h-4 w-4" />, comingSoon: true },
-      { name: "Desarrollo", href: "/audesign/development", icon: <GitBranch className="h-4 w-4" />, comingSoon: true },
       {
         name: "Contabilidad",
         href: "/audesign/accounting",
         icon: <Receipt className="h-4 w-4" />,
       },
     ],
-  },
-  {
-    name: "Ingestion",
-    href: "/ingestion",
-    icon: <Database className="h-5 w-5" />,
   },
   {
     name: "Integraciones",
@@ -138,11 +125,6 @@ const navItems: NavItem[] = [
         name: "Dashboard",
         href: "/integrations",
         icon: <LayoutDashboard className="h-4 w-4" />,
-      },
-      {
-        name: "Bank Import",
-        href: "/integrations/bank-import",
-        icon: <Landmark className="h-4 w-4" />,
       },
       {
         name: "Stripe",
@@ -160,11 +142,6 @@ const navItems: NavItem[] = [
         icon: <ShoppingCart className="h-4 w-4" />,
       },
     ],
-  },
-  {
-    name: "Empleados",
-    href: "/employees",
-    icon: <Users className="h-5 w-5" />,
   },
 ]
 
