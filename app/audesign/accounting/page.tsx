@@ -240,8 +240,9 @@ export default function AudesignAccountingPage() {
     const currentData = monthlyData.find((m) => m.month === currentYM)
     const prevData = monthlyData.find((m) => m.month === prevMonth)
 
-    const currentRevenue = currentData?.revenue || 0
-    const prevRevenue = prevData?.revenue || 0
+    // Use Shopify as primary revenue (avoids double-counting with Stripe payment processing)
+    const currentRevenue = currentData?.shopify || 0
+    const prevRevenue = prevData?.shopify || 0
     const revenueMoM = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue) * 100 : 0
 
     const currentNet = currentData?.netRevenue || 0
@@ -407,7 +408,7 @@ export default function AudesignAccountingPage() {
                   <TrendingUp className="h-5 w-5 text-emerald-500" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground truncate">Revenue (mes)</p>
+                  <p className="text-xs text-muted-foreground truncate">Shopify Revenue (mes)</p>
                   <p className="text-lg font-bold text-emerald-500">{fmtEUR(kpis.currentRevenue)}</p>
                   {kpis.revenueMoM !== 0 && (
                     <p className={`text-xs ${kpis.revenueMoM >= 0 ? "text-emerald-500" : "text-rose-500"}`}>

@@ -6,17 +6,36 @@ import type { Transaction, NewTransaction } from "@/src/types/database"
 
 export type { Transaction, NewTransaction }
 
+const PAGE_SIZE = 1000
+
+// Paginates through all rows to bypass PostgREST max_rows=1000 server limit
+async function fetchAllTransactionPages(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  queryFn: (from: number, to: number) => any
+): Promise<Transaction[]> {
+  const all: Transaction[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await queryFn(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return all
+}
+
 export async function getTransactionsByProject(projectId: string): Promise<Transaction[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("transactions")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("date", { ascending: false })
-      .range(0, 49999)
-
-    if (error) throw error
-    return data || []
+    return await fetchAllTransactionPages((from, to) =>
+      supabaseAdmin
+        .from("transactions")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("date", { ascending: false })
+        .range(from, to)
+    )
   } catch (error) {
     console.error("Error fetching transactions:", error)
     return []
@@ -25,14 +44,13 @@ export async function getTransactionsByProject(projectId: string): Promise<Trans
 
 export async function getAllTransactions(): Promise<Transaction[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("transactions")
-      .select("*")
-      .order("date", { ascending: false })
-      .range(0, 49999)
-
-    if (error) throw error
-    return data || []
+    return await fetchAllTransactionPages((from, to) =>
+      supabaseAdmin
+        .from("transactions")
+        .select("*")
+        .order("date", { ascending: false })
+        .range(from, to)
+    )
   } catch (error) {
     console.error("Error fetching transactions:", error)
     return []
@@ -174,22 +192,22 @@ export async function deleteTransaction(id: string): Promise<boolean> {
 // Get P&L summary for a project
 export async function getProjectPL(projectId: string) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("transactions")
-      .select("type, amount")
-      .eq("project_id", projectId)
-      .range(0, 49999)
-
-    if (error) throw error
+    const rows = await fetchAllTransactionPages((from, to) =>
+      supabaseAdmin
+        .from("transactions")
+        .select("type, amount")
+        .eq("project_id", projectId)
+        .range(from, to)
+    )
 
     let income = 0
     let expense = 0
 
-    for (const row of data || []) {
-      const amount = parseFloat(row.amount || "0")
-      if (row.type === "income") {
+    for (const row of rows) {
+      const amount = parseFloat((row as any).amount || "0")
+      if ((row as any).type === "income") {
         income += amount
-      } else if (row.type === "expense") {
+      } else if ((row as any).type === "expense") {
         expense += amount
       }
     }
@@ -208,19 +226,19 @@ export async function getProjectPL(projectId: string) {
 // Get monthly breakdown for a project
 export async function getProjectMonthlyData(projectId: string) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("transactions")
-      .select("date, type, amount")
-      .eq("project_id", projectId)
-      .order("date")
-      .range(0, 49999)
-
-    if (error) throw error
+    const data = await fetchAllTransactionPages((from, to) =>
+      supabaseAdmin
+        .from("transactions")
+        .select("date, type, amount")
+        .eq("project_id", projectId)
+        .order("date")
+        .range(from, to)
+    )
 
     // Transform to chart-friendly format
     const monthlyMap: Record<string, { month: string; income: number; expense: number }> = {}
 
-    for (const row of data || []) {
+    for (const row of data) {
       const month = row.date.substring(0, 7) // YYYY-MM
       if (!monthlyMap[month]) {
         monthlyMap[month] = { month, income: 0, expense: 0 }
@@ -250,17 +268,17 @@ export async function getAllProjectsPL() {
 
     if (projectsError) throw projectsError
 
-    const { data: transactions, error: txError } = await supabaseAdmin
-      .from("transactions")
-      .select("project_id, type, amount")
-      .range(0, 49999)
-
-    if (txError) throw txError
+    const transactions = await fetchAllTransactionPages((from, to) =>
+      supabaseAdmin
+        .from("transactions")
+        .select("project_id, type, amount")
+        .range(from, to)
+    )
 
     // Build P&L map
     const plMap: Record<string, { income: number; expense: number }> = {}
 
-    for (const row of transactions || []) {
+    for (const row of transactions) {
       if (!plMap[row.project_id]) {
         plMap[row.project_id] = { income: 0, expense: 0 }
       }
@@ -304,19 +322,19 @@ export async function getBusinessUnitMonthlyData(slug: string) {
     const projectIds = projects?.map(p => p.id) || []
     if (projectIds.length === 0) return []
 
-    const { data, error } = await supabaseAdmin
-      .from("transactions")
-      .select("date, type, amount")
-      .in("project_id", projectIds)
-      .order("date")
-      .range(0, 49999)
-
-    if (error) throw error
+    const data = await fetchAllTransactionPages((from, to) =>
+      supabaseAdmin
+        .from("transactions")
+        .select("date, type, amount")
+        .in("project_id", projectIds)
+        .order("date")
+        .range(from, to)
+    )
 
     const monthlyMap: Record<string, { month: string; income: number; expense: number }> = {}
 
-    for (const row of data || []) {
-      const month = row.date.substring(0, 7)
+    for (const row of data) {
+      const month = (row as any).date.substring(0, 7)
       if (!monthlyMap[month]) {
         monthlyMap[month] = { month, income: 0, expense: 0 }
       }
@@ -341,18 +359,18 @@ export async function getMonthlyStats() {
     const now = new Date()
     const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
 
-    const { data, error } = await supabaseAdmin
-      .from("transactions")
-      .select("type, amount")
-      .gte("date", monthStart)
-      .range(0, 49999)
-
-    if (error) throw error
+    const data = await fetchAllTransactionPages((from, to) =>
+      supabaseAdmin
+        .from("transactions")
+        .select("type, amount")
+        .gte("date", monthStart)
+        .range(from, to)
+    )
 
     let income = 0
     let expense = 0
 
-    for (const row of data || []) {
+    for (const row of data) {
       const amount = parseFloat(row.amount || "0")
       if (row.type === "income") {
         income += amount
